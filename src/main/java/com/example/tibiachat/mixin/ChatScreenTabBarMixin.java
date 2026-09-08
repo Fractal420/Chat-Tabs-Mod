@@ -31,6 +31,7 @@ public abstract class ChatScreenTabBarMixin {
     private static final int TAB_W_MAX = 120;
     private static final int TAB_SCROLL_STEP = 40;
     private static final int TAB_BOTTOM_OFFSET = 30;
+    private static final int CLOSE_SIZE = 8;
 
     private int tibiaChatTabs$tabScroll = 0;
 
@@ -261,11 +262,17 @@ public abstract class ChatScreenTabBarMixin {
             shown = shown + " (" + unread + ")";
         }
 
-        if (mc.textRenderer.getWidth(shown) > w - 8) {
+        int textRightPadding =
+                hover && !ConversationManager.MAIN.equals(key)
+                        ? CLOSE_SIZE + 6
+                        : 5;
+
+        if (mc.textRenderer.getWidth(shown) >
+                w - textRightPadding - 4) {
             shown =
                     mc.textRenderer.trimToWidth(
                             shown,
-                            w - 12
+                            w - textRightPadding - 8
                     ) + "…";
         }
 
@@ -279,7 +286,40 @@ public abstract class ChatScreenTabBarMixin {
                         : 0xFFFFFFFF
         );
 
+        if (
+                hover &&
+                !ConversationManager.MAIN.equals(key)
+        ) {
+            int closeX = x + w - CLOSE_SIZE - 2;
+            int closeY = top + 4;
+
+            ctx.drawTextWithShadow(
+                    mc.textRenderer,
+                    Text.literal("×"),
+                    closeX,
+                    closeY - 1,
+                    0xFFFFFFFF
+            );
+        }
+
         return x + w;
+    }
+
+    private boolean tibiaChatTabs$isCloseHovered(
+            double mouseX,
+            double mouseY,
+            int tabX,
+            int tabW,
+            int top,
+            int bottom
+    ) {
+        int closeX = tabX + tabW - CLOSE_SIZE - 2;
+        int closeY = top + 2;
+
+        return mouseX >= closeX &&
+                mouseX < closeX + CLOSE_SIZE &&
+                mouseY >= closeY &&
+                mouseY < bottom - 1;
     }
 
     @Inject(
@@ -437,6 +477,22 @@ public abstract class ChatScreenTabBarMixin {
             }
 
             if (
+                    tibiaChatTabs$isCloseHovered(
+                            click.x(),
+                            click.y(),
+                            tabX,
+                            w,
+                            top,
+                            bottom
+                    )
+            ) {
+                tibiaChatTabs$closeTab(c.key());
+
+                cir.setReturnValue(true);
+                return;
+            }
+
+            if (
                     click.x() >= tabX &&
                     click.x() < tabX + w
             ) {
@@ -448,6 +504,55 @@ public abstract class ChatScreenTabBarMixin {
 
             tabX += w;
         }
+    }
+
+    private void tibiaChatTabs$closeTab(String key) {
+        String selectedKey =
+                TibiaChatTabsClient.CHAT.selectedKey();
+
+        boolean selected =
+                key.equals(selectedKey);
+
+        TibiaChatTabsClient.CHAT.conversations()
+                .remove(key);
+
+        if (!selected) {
+            tibiaChatTabs$clampTabScrollAfterClose();
+            return;
+        }
+
+        String nextKey =
+                ConversationManager.MAIN;
+
+        for (Conversation c :
+                TibiaChatTabsClient.CHAT
+                        .conversations()
+                        .all()) {
+            nextKey = c.key();
+            break;
+        }
+
+        tibiaChatTabs$select(nextKey);
+    }
+
+    private void tibiaChatTabs$clampTabScrollAfterClose() {
+        MinecraftClient mc =
+                MinecraftClient.getInstance();
+
+        int screenW =
+                mc.getWindow().getScaledWidth();
+
+        int tabsLeft =
+                2 + TAB_W_MAIN;
+
+        int tabsRight =
+                screenW - 4;
+
+        tibiaChatTabs$clampTabScroll(
+                mc,
+                tabsLeft,
+                tabsRight
+        );
     }
 
     private void tibiaChatTabs$select(
