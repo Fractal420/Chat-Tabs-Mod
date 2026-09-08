@@ -8,9 +8,12 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.client.gui.screen.ChatScreen;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -20,11 +23,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * Replaces the old "swap in a whole custom Screen" approach. Vanilla ChatScreen and
  * ChatHud do all the real work (rendering, scrollback, PgUp/PgDn history, text input,
  * compatibility with any other chat-formatting mod); we only draw a thin tab strip on
- * top and route clicks on it. The actual filtering of which messages are visible per
- * tab happens in TibiaChatTabsClient via ALLOW_CHAT/ALLOW_GAME, not here.
+ * top, route clicks on it, and - since vanilla has no idea what a "whisper tab" is -
+ * reroute Enter-to-send while one is active into a /w command.
  */
 @Mixin(ChatScreen.class)
 public abstract class ChatScreenTabBarMixin {
+
+    // Vanilla ChatScreen's own input widget. Same field the old TibiaChatScreen reused
+    // directly (it extended ChatScreen); we just need to @Shadow it here instead.
+    @Shadow protected TextFieldWidget chatField;
 
     private static final int TAB_H = 16;
     private static final int TAB_W_MAIN = 50;
@@ -37,7 +44,6 @@ public abstract class ChatScreenTabBarMixin {
         int screenW = mc.getWindow().getScaledWidth();
         int screenH = mc.getWindow().getScaledHeight();
 
-        // Sits directly above where vanilla draws its input box (bottom ~14px of screen).
         int top = screenH - 14 - TAB_H - 2;
         int bottom = top + TAB_H;
 
@@ -48,7 +54,7 @@ public abstract class ChatScreenTabBarMixin {
 
         for (Conversation c : TibiaChatTabsClient.CHAT.conversations().all()) {
             int w = tibiaChatTabs$tabWidth(mc, c.playerName());
-            if (x + w > screenW - 4) break; // ran out of room; extra tabs simply won't show
+            if (x + w > screenW - 4) break;
             x = tibiaChatTabs$drawTab(ctx, mc, c.playerName(), c.key(), x, w, top, bottom, mouseX, mouseY, c.unread());
         }
     }
@@ -105,6 +111,42 @@ public abstract class ChatScreenTabBarMixin {
             }
             x += w;
         }
+    }
+
+    /**
+     * Vanilla ChatScreen has no concept of "this input goes to a specific whisper
+     * target" - it always sends the field's text as plain chat (or a command, if it
+     * starts with "/"). While a whisper tab is selected we intercept Enter ourselves
+     * and send "/w <name> <text>" instead, then swallow the keypress so vanilla never
+     * gets a chance to also send it as a public message.
+     */
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void tibiaChatTabs$onKey(KeyInput input, CallbackInfoReturnable<Boolean> cir) {
+        if (input.key() != GLFW.GLFW_KEY_ENTER && input.key() != GLFW.GLFW_KEY_KP_ENTER) return;
+
+        String key = TibiaChatTabsClient.CHAT.selectedKey();
+        if (ConversationManager.MAIN.equals(key)) return; // let vanilla handle the normal chat tab as-is
+
+        Conversation c = TibiaChatTabsClient.CHAT.conversations().getByKey(key);
+        if (c == null || chatField == null) return;
+
+        String text = chatField.getText().trim();
+        if (text.isEmpty()) {
+            cir.setReturnValue(true);
+            return;
+        }
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return;
+
+        String whisperCmd = TibiaChatTabsClient.CONFIG.whisperCommand(); // e.g. "/w"
+        String body = whisperCmd + " " + c.playerName() + " " + text;
+        String command = body.startsWith("/") ? body.substring(1) : body;
+
+        mc.player.networkHandler.sendChatCommand(command);
+
+        chatField.setText("");
+        cir.setReturnValue(true); // consumed - don't let vanilla also send this as public chat
     }
 
     /** Selects a tab and repaints the vanilla ChatHud from stored history for that tab. */
