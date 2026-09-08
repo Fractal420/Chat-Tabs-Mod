@@ -8,6 +8,16 @@ import java.util.regex.*;
 
 public final class MessageClassifier {
     private final TibiaChatConfig config;
+
+    // Matches the server's own confirmation/echo of YOUR outgoing whisper, e.g.
+    // "You whisper to _gregOS: test" / "You whispered to Steve: hi". This must be
+    // checked before INCOMING below - otherwise the generic "name whispers: body"
+    // pattern happily (and wrongly) matches it with playerName captured as "You".
+    private static final Pattern SELF_ECHO = Pattern.compile(
+        "^(?:You|you)\\s+whispers?(?:ed)?\\s+to\\s+([^:]{1,60}):[ \\u00a0]*(.*)$",
+        Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
+
     private static final List<Pattern> INCOMING = List.of(
         Pattern.compile("^\\[([^\\]]+)\\s*->\\s*(?:You|you)\\]\\s*:?[ \\u00a0]*(.*)$", Pattern.CASE_INSENSITIVE|Pattern.DOTALL),
         Pattern.compile("^([^:]{1,40})\\s+whispers?(?: to you)?\\s*:?\\s*(.*)$", Pattern.CASE_INSENSITIVE|Pattern.DOTALL),
@@ -17,10 +27,20 @@ public final class MessageClassifier {
 
     public Classification incoming(Text message, GameProfile sender) {
         String raw=message.getString();
+
+        Matcher echo = SELF_ECHO.matcher(raw);
+        if (echo.matches()) {
+            String name = echo.group(1).trim();
+            return new Classification(MessageType.WHISPER_OUTGOING, name, null, echo.group(2), name.toLowerCase(Locale.ROOT));
+        }
+
         for(Pattern p:INCOMING){
             Matcher m=p.matcher(raw);
             if(m.matches()){
                 String name=m.group(1).trim();
+                // Defensive: never let "you"/"me" be treated as a whisper sender's name -
+                // that's always our own message being echoed back in some server-specific phrasing.
+                if(name.equalsIgnoreCase("you") || name.equalsIgnoreCase("me")) continue;
                 if(sender!=null && sender.name()!=null && sender.name().equalsIgnoreCase(name))
                     return whisper(name,sender.id(),m.group(2));
                 if(sender==null || sender.name()==null)
@@ -33,6 +53,7 @@ public final class MessageClassifier {
                 Matcher m=Pattern.compile(regex,Pattern.CASE_INSENSITIVE|Pattern.DOTALL).matcher(raw);
                 if(m.matches()){
                     String name=m.group(1).trim();
+                    if(name.equalsIgnoreCase("you") || name.equalsIgnoreCase("me")) continue;
                     UUID id=sender!=null && sender.name()!=null && sender.name().equalsIgnoreCase(name)?sender.id():null;
                     return whisper(name,id,m.groupCount()>=2?m.group(2):raw);
                 }
@@ -41,7 +62,7 @@ public final class MessageClassifier {
         if(sender!=null) return new Classification(MessageType.PUBLIC,sender.name(),sender.id(),raw,null);
         // No attached player identity (this is how most servers deliver /w, /msg, /tell,
         // system broadcasts, join/leave messages, etc. via ClientReceiveMessageEvents.GAME)
-        // and none of the whisper patterns above matched, so treat it as a plain system line.
+        // and nothing above matched, so treat it as a plain system line.
         return new Classification(MessageType.SYSTEM,null,null,raw,null);
     }
 

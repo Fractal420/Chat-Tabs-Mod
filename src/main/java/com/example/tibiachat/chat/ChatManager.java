@@ -22,8 +22,6 @@ public final class ChatManager {
     public ConversationManager conversations(){return conversations;}
     public String selectedKey(){return selectedKey;}
 
-    /** Switches the active conversation and clears its unread count. Does NOT touch
-     *  the vanilla ChatHud - the caller (mixin) is responsible for repainting it. */
     public void select(String key){
         selectedKey=key;
         Conversation c=conversations.getByKey(key);
@@ -38,33 +36,43 @@ public final class ChatManager {
         return conversations.getByKey(selectedKey);
     }
 
-    /** Total unread whispers across all conversations, for the always-visible HUD badge. */
     public int totalUnread(){
         int total=0;
         for(Conversation c:conversations.all()) total+=c.unread();
         return total;
     }
 
-    /**
-     * Single entry point for every incoming line, whether it arrived as a signed player
-     * chat message (ClientReceiveMessageEvents.CHAT, sender != null) or an unsigned
-     * server/system message (ClientReceiveMessageEvents.GAME, sender == null - this is
-     * how most servers actually deliver /w, /msg, /tell output).
-     *
-     * Returns the conversation key the message belongs to ("main" or a whisper key), or
-     * null if the message was consumed silently (e.g. it was our own echoed whisper and
-     * should not be stored or shown again). Callers wire this into ALLOW_CHAT/ALLOW_GAME
-     * so the vanilla ChatHud only ever displays messages for the currently selected tab.
-     */
     public String classifyAndStore(Text message, GameProfile sender, Instant timestamp){
+        String raw = message.getString();
+
         // Some servers echo /w as a message "from" the local player. If the text matches
         // a recently observed outgoing whisper, consume that echo before classification.
         if(sender != null && MinecraftClient.getInstance().player != null
             && sender.id().equals(MinecraftClient.getInstance().player.getUuid())
-            && removeMatchingPendingBody(message.getString())) return null;
+            && removeMatchingPendingBody(raw)) return null;
 
         Classification cl=classifier.incoming(message,sender);
-        if(cl.isWhisper()){
+
+        if(cl.type()==MessageType.WHISPER_OUTGOING){
+            // This is the server's own confirmation/echo of a whisper WE just sent
+            // (e.g. "You whisper to _gregOS: test"), not a message from anyone new.
+            // onOutgoingCommand() already rendered our line into the correct tab the
+            // instant we sent it, so this is purely for de-duplication. It must never
+            // spawn a conversation - "You" is not a player.
+            String fp=fingerprint(cl.playerName(),cl.body());
+            if(removeMatchingPendingBody(raw) || removeMatchingPending(fp)) return null;
+            // Fallback (pending queue already expired/emptied for some reason): still
+            // file it into the *existing* conversation for that recipient rather than
+            // dropping it or inventing a new tab.
+            Conversation existing=conversations.getByKey(cl.playerName().toLowerCase(Locale.ROOT));
+            if(existing==null) return null; // no known conversation to attach it to - discard safely
+            ChatMessage cm=make(message,MessageType.WHISPER_OUTGOING,cl.playerName(),cl.playerUuid(),existing.key(),timestamp,fp);
+            existing.add(cm);
+            main.add(cm);
+            return existing.key();
+        }
+
+        if(cl.type()==MessageType.WHISPER_INCOMING){
             String fp=fingerprint(cl.playerName(),cl.body());
             if(removeMatchingPending(fp)) return null; // server echo of our own outgoing message
             Conversation c=conversations.getOrCreate(cl.playerName(),cl.playerUuid());
@@ -73,12 +81,12 @@ public final class ChatManager {
             main.add(cm); // retain normal chat stream too
             if(!c.key().equals(selectedKey)) c.markUnread(); // only "new" if you're not already looking at it
             return c.key();
-        } else {
-            ChatMessage cm=make(message,cl.type(),cl.playerName(),cl.playerUuid(),null,timestamp,
-                fingerprint(cl.playerName(),message.getString()));
-            main.add(cm);
-            return ConversationManager.MAIN;
         }
+
+        ChatMessage cm=make(message,cl.type(),cl.playerName(),cl.playerUuid(),null,timestamp,
+            fingerprint(cl.playerName(),raw));
+        main.add(cm);
+        return ConversationManager.MAIN;
     }
 
     public void onOutgoingCommand(String command){
