@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "tibia_chat_tabs",
+  "version": "${version}",
+  "name": "Tibia-Style Chat Tabs",
+  "description": "Client-side Fabric chat tabs with private conversations.",
+  "environment": "client",
+  "entrypoints": { "client": ["com.example.tibiachat.TibiaChatTabsClient"] },
+  "mixins": ["tibia_chat_tabs.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.17.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

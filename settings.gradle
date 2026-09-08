@@ -1,0 +1,3 @@
+pluginManagement { repositories { maven { url = "https://maven.fabricmc.net/" }; gradlePluginPortal(); mavenCentral() } }
+dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS); repositories { maven { url = "https://maven.fabricmc.net/" }; mavenCentral() } }
+rootProject.name = "tibia-chat-tabs"
