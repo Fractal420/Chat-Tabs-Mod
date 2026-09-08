@@ -73,3 +73,4 @@ Verify:
 - outgoing `/w` creates the conversation before any server response;
 - echoed outgoing messages are deduplicated;
 - Minecraft chat history and the underlying chat HUD continue to receive messages normally.
+# Chat-Tabs-Mod
