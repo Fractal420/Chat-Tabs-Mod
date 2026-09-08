@@ -10,7 +10,7 @@ public final class TibiaChatConfig {
     private List<String> whisperAliases=new ArrayList<>(List.of("w","msg","tell","whisper"));
     private List<String> incomingWhisperRegexes =
         new ArrayList<>(List.of(
-                "^(.+?)\\s+whispers\\s*:?\\s*(.*)$"
+                "^(.+?)\\s+whispers:\\s*:?(.*)$"
         ));
     public String whisperCommand(){return whisperCommand;}
     public List<String> incomingWhisperRegexes(){return Collections.unmodifiableList(incomingWhisperRegexes);}
