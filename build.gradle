@@ -1,12 +1,10 @@
 plugins {
-    id 'fabric-loom' version "${loom_version}"
+    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
     id 'maven-publish'
 }
 version = project.mod_version
 group = project.maven_group
 base { archivesName = project.archives_base_name }
-
-repositories { mavenCentral() }
 
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
