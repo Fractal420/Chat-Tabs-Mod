@@ -19,20 +19,15 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // IMPORTANT: we use ALLOW_* (not the plain CHAT/GAME observer events) because these
-        // are the only ones that can veto a message before it ever reaches the vanilla
-        // ChatHud. Every message is still classified + stored for every conversation;
-        // returning false here just means "don't paint this one in the log you're looking
-        // at right now" - it will appear the moment you switch to its tab.
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {
             String key = CHAT.classifyAndStore(message, sender, timestamp);
-            return key == null || key.equals(CHAT.selectedKey());
+            return key != null && key.equals(CHAT.selectedKey());
         });
 
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
-            if (overlay) return true; // action-bar messages (e.g. XP), leave untouched
+            if (overlay) return true;
             String key = CHAT.classifyAndStore(message, null, java.time.Instant.now());
-            return key == null || key.equals(CHAT.selectedKey());
+            return key != null && key.equals(CHAT.selectedKey());
         });
 
         ClientSendMessageEvents.COMMAND.register(CHAT::onOutgoingCommand);
@@ -41,8 +36,6 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> CHAT.tick());
 
-        // Always-on indicator: shows even while chat is closed, unlike the old
-        // "unread count only visible once you open the tab bar" behaviour.
         HudRenderCallback.EVENT.register(this::renderUnreadBadge);
     }
 
@@ -51,10 +44,9 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
         if (unread <= 0) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
-        String label = "\u2709 " + unread; // envelope glyph + count
+        String label = "\u2709 " + unread;
         int textWidth = mc.textRenderer.getWidth(label);
 
-        // Bottom-left, just left of/above the hotbar area. Tweak to taste.
         int x = 6;
         int y = mc.getWindow().getScaledHeight() - 66;
 
