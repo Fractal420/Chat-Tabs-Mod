@@ -21,6 +21,9 @@ public final class ChatManager {
     public List<ChatMessage> main(){return Collections.unmodifiableList(main);}
     public ConversationManager conversations(){return conversations;}
     public String selectedKey(){return selectedKey;}
+
+    /** Switches the active conversation and clears its unread count. Does NOT touch
+     *  the vanilla ChatHud - the caller (mixin) is responsible for repainting it. */
     public void select(String key){
         selectedKey=key;
         Conversation c=conversations.getByKey(key);
@@ -35,29 +38,47 @@ public final class ChatManager {
         return conversations.getByKey(selectedKey);
     }
 
-    public void onIncomingChat(Text message, GameProfile sender, Instant timestamp){
-        // Some servers echo /w as a message from the local player. If the text matches
+    /** Total unread whispers across all conversations, for the always-visible HUD badge. */
+    public int totalUnread(){
+        int total=0;
+        for(Conversation c:conversations.all()) total+=c.unread();
+        return total;
+    }
+
+    /**
+     * Single entry point for every incoming line, whether it arrived as a signed player
+     * chat message (ClientReceiveMessageEvents.CHAT, sender != null) or an unsigned
+     * server/system message (ClientReceiveMessageEvents.GAME, sender == null - this is
+     * how most servers actually deliver /w, /msg, /tell output).
+     *
+     * Returns the conversation key the message belongs to ("main" or a whisper key), or
+     * null if the message was consumed silently (e.g. it was our own echoed whisper and
+     * should not be stored or shown again). Callers wire this into ALLOW_CHAT/ALLOW_GAME
+     * so the vanilla ChatHud only ever displays messages for the currently selected tab.
+     */
+    public String classifyAndStore(Text message, GameProfile sender, Instant timestamp){
+        // Some servers echo /w as a message "from" the local player. If the text matches
         // a recently observed outgoing whisper, consume that echo before classification.
         if(sender != null && MinecraftClient.getInstance().player != null
             && sender.id().equals(MinecraftClient.getInstance().player.getUuid())
-            && removeMatchingPendingBody(message.getString())) return;
+            && removeMatchingPendingBody(message.getString())) return null;
+
         Classification cl=classifier.incoming(message,sender);
         if(cl.isWhisper()){
             String fp=fingerprint(cl.playerName(),cl.body());
-            if(removeMatchingPending(fp)) return; // server echo of our own outgoing message
+            if(removeMatchingPending(fp)) return null; // server echo of our own outgoing message
             Conversation c=conversations.getOrCreate(cl.playerName(),cl.playerUuid());
             ChatMessage cm=make(message,MessageType.WHISPER_INCOMING,cl.playerName(),cl.playerUuid(),c.key(),timestamp,fp);
             c.add(cm);
-            c.markUnread(); // deliberately does not change selectedKey
-            main.add(cm);   // retain normal chat stream too
+            main.add(cm); // retain normal chat stream too
+            if(!c.key().equals(selectedKey)) c.markUnread(); // only "new" if you're not already looking at it
+            return c.key();
         } else {
-            main.add(make(message,cl.type(),cl.playerName(),cl.playerUuid(),null,timestamp,
-                fingerprint(cl.playerName(),message.getString())));
+            ChatMessage cm=make(message,cl.type(),cl.playerName(),cl.playerUuid(),null,timestamp,
+                fingerprint(cl.playerName(),message.getString()));
+            main.add(cm);
+            return ConversationManager.MAIN;
         }
-    }
-
-    public void onSystem(Text message){
-        main.add(make(message,MessageType.SYSTEM,null,null,null,Instant.now(),fingerprint(null,message.getString())));
     }
 
     public void onOutgoingCommand(String command){
@@ -72,6 +93,10 @@ public final class ChatManager {
             c.add(cm);
             main.add(cm);
             pendingEchoes.addLast(new PendingEcho(fp,System.nanoTime()));
+            // If you're actively looking at this tab, reflect the outgoing line immediately.
+            if(c.key().equals(selectedKey)){
+                MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(cm.component());
+            }
         });
     }
 

@@ -39,7 +39,10 @@ public final class MessageClassifier {
             } catch(PatternSyntaxException ignored){}
         }
         if(sender!=null) return new Classification(MessageType.PUBLIC,sender.name(),sender.id(),raw,null);
-        return new Classification(MessageType.UNKNOWN,null,null,raw,null);
+        // No attached player identity (this is how most servers deliver /w, /msg, /tell,
+        // system broadcasts, join/leave messages, etc. via ClientReceiveMessageEvents.GAME)
+        // and none of the whisper patterns above matched, so treat it as a plain system line.
+        return new Classification(MessageType.SYSTEM,null,null,raw,null);
     }
 
     private Classification whisper(String name, UUID id, String body){
