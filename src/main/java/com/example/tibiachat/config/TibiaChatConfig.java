@@ -8,7 +8,10 @@ import net.fabricmc.loader.api.FabricLoader;
 public final class TibiaChatConfig {
     private String whisperCommand="/w";
     private List<String> whisperAliases=new ArrayList<>(List.of("w","msg","tell","whisper"));
-    private List<String> incomingWhisperRegexes=new ArrayList<>();
+    private List<String> incomingWhisperRegexes =
+        new ArrayList<>(List.of(
+                "^(.+?)\\s+whispers\\s+to\\s+you\\s*:?\\s*(.*)$"
+        ));
     public String whisperCommand(){return whisperCommand;}
     public List<String> incomingWhisperRegexes(){return Collections.unmodifiableList(incomingWhisperRegexes);}
     public boolean isWhisperCommand(String base){
