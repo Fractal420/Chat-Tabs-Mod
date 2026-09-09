@@ -4,6 +4,13 @@ A client-side Fabric mod for Minecraft that adds **Tibia-style chat tabs** to th
 
 Built with **6b6t** (an anarchy server) in mind, where whisper spam can bury conversations, but the whisper detection is regex-based and configurable, so it can be adapted to other servers' chat formats.
 
+
+https://github.com/user-attachments/assets/e0f0f37b-672b-439a-ab1e-5682ec3d714d
+
+
+
+
+
 ## Why
 
 Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to the main channel. This mod brings that idea to Minecraft: every player you whisper with (or who whispers you) gets their own tab at the bottom of the chat screen, with an unread counter, so you never lose a DM in the noise of public chat.
