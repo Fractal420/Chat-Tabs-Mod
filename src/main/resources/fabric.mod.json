@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "tibia_chat_tabs",
+  "id": "chat_tabs",
   "version": "${version}",
-  "name": "Tibia-Style Chat Tabs",
+  "name": "Chat Tabs",
   "description": "Client-side Fabric chat tabs with private conversations.",
   "environment": "client",
   "entrypoints": { "client": ["com.example.tibiachat.TibiaChatTabsClient"] },
