@@ -9,10 +9,6 @@ import java.util.regex.*;
 public final class MessageClassifier {
     private final TibiaChatConfig config;
 
-    // Matches the server's own confirmation/echo of YOUR outgoing whisper, e.g.
-    // "You whisper to _gregOS: test" / "You whispered to Steve: hi". This must be
-    // checked before INCOMING below - otherwise the generic "name whispers: body"
-    // pattern happily (and wrongly) matches it with playerName captured as "You".
     private static final Pattern SELF_ECHO = Pattern.compile(
         "^(?:You|you)\\s+whispers?(?:ed)?\\s+to\\s+([^:]{1,60}):[ \\u00a0]*(.*)$",
         Pattern.CASE_INSENSITIVE | Pattern.DOTALL
@@ -38,8 +34,6 @@ public final class MessageClassifier {
             Matcher m=p.matcher(raw);
             if(m.matches()){
                 String name=m.group(1).trim();
-                // Defensive: never let "you"/"me" be treated as a whisper sender's name -
-                // that's always our own message being echoed back in some server-specific phrasing.
                 if(name.equalsIgnoreCase("you") || name.equalsIgnoreCase("me")) continue;
                 if(sender!=null && sender.name()!=null && sender.name().equalsIgnoreCase(name))
                     return whisper(name,sender.id(),m.group(2));
@@ -47,7 +41,7 @@ public final class MessageClassifier {
                     return whisper(name,null,m.group(2));
             }
         }
-        // Server-specific regexes are user-configurable: name group 1, body group 2.
+        
         for(String regex:config.incomingWhisperRegexes()){
             try {
                 Matcher m=Pattern.compile(regex,Pattern.CASE_INSENSITIVE|Pattern.DOTALL).matcher(raw);
@@ -60,9 +54,6 @@ public final class MessageClassifier {
             } catch(PatternSyntaxException ignored){}
         }
         if(sender!=null) return new Classification(MessageType.PUBLIC,sender.name(),sender.id(),raw,null);
-        // No attached player identity (this is how most servers deliver /w, /msg, /tell,
-        // system broadcasts, join/leave messages, etc. via ClientReceiveMessageEvents.GAME)
-        // and nothing above matched, so treat it as a plain system line.
         return new Classification(MessageType.SYSTEM,null,null,raw,null);
     }
 
