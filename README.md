@@ -33,6 +33,11 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 - [Fabric API](https://modrinth.com/mod/fabric-api) `0.141.6+1.21.11` or compatible
 - Java **21**
 
+## Downloads
+
+- Curseforge: https://www.curseforge.com/minecraft/mc-mods/chat-tabs
+- You can also download it from github releases https://github.com/Fractal420/Chat-Tabs-Mod/releases
+
 ## Installation
 
 1. Install Fabric Loader for Minecraft 1.21.11.
