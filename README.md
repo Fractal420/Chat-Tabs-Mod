@@ -1,75 +1,113 @@
-# Tibia-Style Chat Tabs
+# Chat Tabs
 
-Client-side Fabric mod for Minecraft Java 1.21.11.
+A client-side Fabric mod for Minecraft that adds **Tibia-style chat tabs** to the vanilla chat screen, so private messages get their own tab instead of scrolling by in the main chat feed.
 
-## Architecture
+Built with **6b6t** (an anarchy server) in mind, where whisper spam can bury conversations, but the whisper detection is regex-based and configurable, so it can be adapted to other servers' chat formats.
 
-The implementation deliberately uses Fabric's message events rather than replacing `ChatHud`:
-- `ClientReceiveMessageEvents.CHAT` captures player chat with the original `Text`, signed message, sender profile, message type parameters, and reception timestamp.
-- `ClientReceiveMessageEvents.GAME` captures server/system messages without touching vanilla display.
-- `ClientSendMessageEvents.COMMAND` observes outgoing commands so `/w Alice Hello` creates Alice's conversation immediately.
-- A single minimal `ChatHud#setScreen` mixin swaps only the vanilla chat screen for the tabbed screen. Vanilla `ChatHud` history/rendering remains intact, so Better Chat and ChatPatches can continue to process the underlying chat stream.
+## Why
 
-Fabric documents these receive/send events as listener APIs; they do not require canceling or replacing the vanilla message pipeline.
+Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to the main channel. This mod brings that idea to Minecraft: every player you whisper with (or who whispers you) gets their own tab at the bottom of the chat screen, with an unread counter, so you never lose a DM in the noise of public chat.
 
-## Private-message detection
+## Features
 
-There is no universal server-side whisper format. The classifier uses sender profiles plus several common whisper layouts and supports extra regexes in `config/tibia_chat_tabs.json`.
+- **Automatic private-message tabs** — incoming and outgoing whispers are detected from chat text and grouped into a per-player conversation tab.
+- **Unread indicators** — each tab shows an unread count, and a small badge (✉) is drawn on the HUD outside of the chat screen showing your total unread whispers.
+- **Scrollable tab bar** — tabs overflow into a horizontally scrollable strip (mouse wheel or shift-scroll) with `‹` / `›` indicators when there's more than fits on screen.
+- **Click to switch, click × to close** — hover a tab to reveal its close button; closing the active tab falls back to the next open one (or Main).
+- **Reply from a tab** — while a whisper tab is open, pressing Enter in the chat box automatically sends your message as a whisper to that tab's player, using your configured whisper command.
+- **Main tab** — all messages (public, system, and a copy of every whisper) still flow into a "Main" tab, so nothing is ever hidden, just organized.
+- **Outgoing/incoming echo de-duplication** — a fingerprinting system matches your sent whispers against the server's own echo/confirmation line so messages aren't duplicated in the tab.
+- **Configurable whisper detection** — the command used to whisper, its aliases, and the regex patterns used to recognize incoming whispers are all stored in a config file and can be edited to match other servers.
 
-Configured regexes use:
-- capture group 1 = player name
-- capture group 2 = message body
+## Requirements
 
-For servers with an unusual format, add a regex rather than changing rendering code.
+- Minecraft **1.21.11**
+- [Fabric Loader](https://fabricmc.net/) **0.19.5** or newer (`>=0.17.0` required)
+- [Fabric API](https://modrinth.com/mod/fabric-api) `0.141.6+1.21.11` or compatible
+- Java **21**
+
+## Installation
+
+1. Install Fabric Loader for Minecraft 1.21.11.
+2. Download and place [Fabric API](https://modrinth.com/mod/fabric-api) and the `chat-tabs-*.jar` from this repo's releases (or your own build) into your `mods` folder.
+3. Launch the game. This is a **client-side only** mod — no server-side installation is needed, and it can be used on servers you don't control (like 6b6t).
+
+## How it works
+
+Open chat as usual (default `T` key). The tab bar appears as a strip along the bottom of the chat screen:
+
+- The leftmost tab, **Main**, always shows every message.
+- A new tab appears automatically the first time you whisper someone or someone whispers you.
+- Switching tabs filters the chat log to just that conversation and clears its unread count.
+- Typing and pressing Enter while a whisper tab is selected sends your text as a whisper to that player — you don't need to type `/w <name>` yourself.
+
+Because the tab bar is rendered on top of the vanilla `ChatScreen`, tabs are only visible while the chat window is open; the unread-count badge on the main HUD lets you know a new whisper arrived even while the chat screen is closed.
+
+## Whisper detection
+
+Messages are classified using pattern matching against the raw chat line, tuned for 6b6t's chat format by default. Recognized incoming formats include:
+
+- `PlayerName whispers: message`
+- `[PlayerName -> You]: message`
+- `[PM] PlayerName: message`
+
+Your own outgoing whispers are recognized from the server's echo (e.g. `You whisper to PlayerName: message`) so they land in the correct tab instead of Main only.
 
 ## Configuration
 
-`config/tibia_chat_tabs.json`:
+Settings are stored in `config/tibia_chat_tabs.json` and are created automatically on first run:
 
 ```json
 {
   "whisperCommand": "/w",
   "whisperAliases": ["w", "msg", "tell", "whisper"],
-  "incomingWhisperRegexes": []
+  "incomingWhisperRegexes": [
+    "^(.+?)\\s+whispers:\\s*:?(.*)$"
+  ]
 }
 ```
 
-`whisperCommand` controls what the private-tab input sends. It should normally be `/w`.
+| Field | Description |
+|---|---|
+| `whisperCommand` | The command sent when you reply from a tab (e.g. `/w`, `/msg`, `/tell`). |
+| `whisperAliases` | Additional command names that should also be treated as whisper commands when you type them yourself, so outgoing messages are captured into the right tab. |
+| `incomingWhisperRegexes` | Extra regular expressions (in addition to the built-in defaults) used to detect an incoming whisper line and extract the sender's name and message body. Each pattern needs two capture groups: the sender name and the message. |
 
-## Build
+Edit this file (while the game is closed, or restart afterward) to adapt the mod to a different server's chat format.
 
-Use JDK 21:
+## Building from source
 
 ```bash
 ./gradlew build
 ```
 
-The jar is written to `build/libs/`.
+The built jar (and sources jar) will be in `build/libs/`.
 
-## Compatibility notes
+## Project structure
 
-The mod never cancels `CHAT` or `GAME` receive events and never replaces the vanilla `ChatHud` message list. This is intentional for compatibility with client chat mods.
+```
+src/main/java/com/example/tibiachat/
+├── TibiaChatTabsClient.java     # Mod entrypoint, event registration, HUD unread badge
+├── chat/
+│   ├── ChatManager.java         # Core message routing, echo de-duplication, outgoing whispers
+│   ├── ConversationManager.java # Tracks per-player Conversation objects
+│   ├── Conversation.java        # A single tab's messages, unread count, scroll state
+│   ├── ChatMessage.java         # A stored, timestamped chat line
+│   ├── MessageClassifier.java   # Regex-based classification of chat lines
+│   ├── Classification.java      # Result of classifying a message
+│   └── MessageType.java         # PUBLIC / WHISPER_INCOMING / WHISPER_OUTGOING / SYSTEM / UNKNOWN
+├── config/
+│   └── TibiaChatConfig.java     # Loads/saves config/tibia_chat_tabs.json
+└── mixin/
+    └── ChatScreenTabBarMixin.java  # Renders the tab bar and handles clicks/scroll/Enter on ChatScreen
+```
 
-Meteor's current Better Chat mixin targets `ChatHud` internals, including queue sizes, rendering width, anti-spam bookkeeping, and clear/refresh hooks. This mod leaves those paths alone.
+## Limitations
 
-ChatPatches similarly owns vanilla chat enhancements such as history, timestamps, search, name rendering and context/copy features. Because the underlying vanilla chat flow is retained, those features remain available in the normal chat HUD.
+- Client-side only — it reorganizes what you see locally and doesn't change what the server sends.
+- Whisper detection depends on matching the server's exact chat phrasing; servers using different wording will need custom `incomingWhisperRegexes`.
+- Tabs and unread counts are not persisted between game sessions.
 
-### Important limitation
+## License
 
-A client cannot reliably infer arbitrary server-specific whisper syntax. The supplied classifier is conservative to avoid turning normal public messages into private conversations. Add the server's format to `incomingWhisperRegexes` when needed.
-
-## Test matrix
-
-Test with:
-1. Vanilla Fabric.
-2. Meteor Client + Better Chat enabled.
-3. ChatPatches enabled.
-4. Meteor Client + Better Chat + ChatPatches together.
-
-Verify:
-- public/system messages stay in Main;
-- incoming whispers create a tab without changing the selected tab;
-- selecting a whisper clears its unread count;
-- outgoing `/w` creates the conversation before any server response;
-- echoed outgoing messages are deduplicated;
-- Minecraft chat history and the underlying chat HUD continue to receive messages normally.
+MIT — see [LICENSE](LICENSE).
