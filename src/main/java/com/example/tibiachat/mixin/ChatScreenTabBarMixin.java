@@ -558,6 +558,10 @@ public abstract class ChatScreenTabBarMixin {
     private void tibiaChatTabs$select(
             String key
     ) {
+        if (TibiaChatTabsClient.CHAT.selectedKey().equals(key)) {
+            return;
+        }
+
         TibiaChatTabsClient.CHAT.select(key);
 
         ChatHud hud =
