@@ -28,10 +28,7 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 
 ## Requirements
 
-- Minecraft **1.21.11**
-- [Fabric Loader](https://fabricmc.net/) **0.19.5** or newer (`>=0.17.0` required)
-- [Fabric API](https://modrinth.com/mod/fabric-api) `0.141.6+1.21.11` or compatible
-- Java **21**
+- [Fabric API](https://modrinth.com/mod/fabric-api)
 
 ## Downloads
 
@@ -40,7 +37,7 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 
 ## Installation
 
-1. Install Fabric Loader for Minecraft 1.21.11.
+1. Install Fabric Loader for Minecraft.
 2. Download and place [Fabric API](https://modrinth.com/mod/fabric-api) and the `chat-tabs-*.jar` from this repo's releases (or your own build) into your `mods` folder.
 3. Launch the game. This is a **client-side only** mod — no server-side installation is needed, and it can be used on servers you don't control (like 6b6t).
 
