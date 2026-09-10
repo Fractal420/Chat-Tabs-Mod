@@ -1,0 +1,35 @@
+name: Question
+description: Ask a question about the mod
+title: "[Question]: "
+labels:
+  - question
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What is your question?
+      placeholder: Ask your question here...
+    validations:
+      required: true
+
+  - type: input
+    id: mod_version
+    attributes:
+      label: Mod version
+      placeholder: e.g. 1.2.0
+
+  - type: input
+    id: minecraft_version
+    attributes:
+      label: Minecraft version
+      placeholder: e.g. 1.21.1
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked the README/documentation first.
+          required: true
+        - label: I have searched existing issues for an answer.
+          required: true

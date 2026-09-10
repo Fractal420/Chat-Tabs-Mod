@@ -1,0 +1,80 @@
+name: Bug
+description: Report something that isn't working correctly
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please provide enough information to reproduce it.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem clearly.
+      placeholder: Tell us what went wrong...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce the issue?
+      placeholder: |
+        1. Open Minecraft...
+        2. Send a private message...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should have happened?
+    validations:
+      required: true
+
+  - type: input
+    id: mod_version
+    attributes:
+      label: Mod version
+      placeholder: e.g. 1.2.0
+    validations:
+      required: true
+
+  - type: input
+    id: minecraft_version
+    attributes:
+      label: Minecraft version
+      placeholder: e.g. 1.21.1
+    validations:
+      required: true
+
+  - type: input
+    id: fabric_loader
+    attributes:
+      label: Fabric Loader version
+      placeholder: e.g. 0.16.10
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or crash report
+      description: If relevant, paste the relevant logs here.
+      render: text
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues to make sure this hasn't already been reported.
+          required: true
+        - label: I am using the latest version of the mod.
+          required: false
+        - label: I have included enough information to reproduce the issue.
+          required: true
