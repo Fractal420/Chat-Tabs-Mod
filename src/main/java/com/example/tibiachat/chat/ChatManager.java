@@ -3,12 +3,11 @@ package com.example.tibiachat.chat;
 import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.config.TibiaChatConfig;
 import com.mojang.authlib.GameProfile;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 public final class ChatManager {
     private final TibiaChatConfig config = TibiaChatTabsClient.CONFIG;
@@ -53,7 +52,7 @@ public final class ChatManager {
         return total;
     }
 
-    public String classifyAndStore(Text message, GameProfile sender, Instant timestamp) {
+    public String classifyAndStore(Component message, GameProfile sender, Instant timestamp) {
         String raw = message.getString();
         Classification cl = classifier.incoming(message, sender);
 
@@ -117,7 +116,7 @@ public final class ChatManager {
 
     public void onOutgoingCommand(String command) {
         classifier.outgoingCommand(command).ifPresent(out -> {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc.player == null) return;
 
             Conversation c = conversations.getOrCreate(
@@ -127,17 +126,17 @@ public final class ChatManager {
 
             String fp = fingerprint(out.playerName(), out.body());
 
-            Text rendered = Text.literal("[")
-                .append(Text.literal(TIME.format(LocalTime.now())))
-                .append(Text.literal("] "))
-                .append(Text.literal("You: "))
-                .append(Text.literal(out.body()));
+            Component rendered = Component.literal("[")
+                .append(Component.literal(TIME.format(LocalTime.now())))
+                .append(Component.literal("] "))
+                .append(Component.literal("You: "))
+                .append(Component.literal(out.body()));
 
             ChatMessage cm = make(
                 rendered,
                 MessageType.WHISPER_OUTGOING,
                 mc.player.getName().getString(),
-                mc.player.getUuid(),
+                mc.player.getUUID(),
                 c.key(),
                 Instant.now(),
                 fp
@@ -147,20 +146,20 @@ public final class ChatManager {
             pendingEchoes.addLast(new PendingEcho(fp, System.nanoTime()));
 
             if (c.key().equals(selectedKey)) {
-                mc.inGameHud.getChatHud().addMessage(cm.component());
+                mc.gui.getChat().addMessage(cm.component());
             }
         });
     }
 
     private UUID findUuid(String name) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
 
         if (mc.player != null && mc.player.getName().getString().equalsIgnoreCase(name)) {
-            return mc.player.getUuid();
+            return mc.player.getUUID();
         }
 
-        if (mc.getNetworkHandler() != null) {
-            var p = mc.getNetworkHandler().getPlayerListEntry(name);
+        if (mc.getConnection() != null) {
+            var p = mc.getConnection().getPlayerInfo(name);
             if (p != null) return p.getProfile().id();
         }
 
@@ -168,7 +167,7 @@ public final class ChatManager {
     }
 
     private ChatMessage make(
-        Text text,
+        Component text,
         MessageType type,
         String name,
         UUID uuid,
@@ -176,17 +175,17 @@ public final class ChatManager {
         Instant at,
         String fp
     ) {
-        Text withTime = text;
+        Component withTime = text;
 
         String raw = text.getString();
         if (!raw.startsWith("[") && (type == MessageType.WHISPER_INCOMING
             || type == MessageType.PUBLIC
             || type == MessageType.SYSTEM)) {
-            withTime = Text.literal("[")
-                .append(Text.literal(TIME.format(
+            withTime = Component.literal("[")
+                .append(Component.literal(TIME.format(
                     at.atZone(ZoneId.systemDefault()).toLocalTime()
                 )))
-                .append(Text.literal("] "))
+                .append(Component.literal("] "))
                 .append(text);
         }
 

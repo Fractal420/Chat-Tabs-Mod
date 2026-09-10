@@ -2,14 +2,13 @@ package com.example.tibiachat.gui;
 
 import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.config.TibiaChatConfig;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
-
 import java.util.Locale;
 import java.util.function.DoubleConsumer;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class TibiaChatConfigScreen extends Screen {
 
@@ -22,7 +21,7 @@ public class TibiaChatConfigScreen extends Screen {
     private final TibiaChatConfig config = TibiaChatTabsClient.CONFIG;
 
     public TibiaChatConfigScreen(Screen parent) {
-        super(Text.literal("Chat Tabs Settings"));
+        super(Component.literal("Chat Tabs Settings"));
         this.parent = parent;
     }
 
@@ -41,26 +40,26 @@ public class TibiaChatConfigScreen extends Screen {
 
         y += 8;
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Reposition / Resize HUD"),
+        this.addRenderableWidget(Button.builder(Component.literal("Reposition / Resize HUD"),
                         btn -> {
-                            if (this.client != null) {
-                                this.client.setScreen(new HudEditScreen(this));
+                            if (this.minecraft != null) {
+                                this.minecraft.setScreen(new HudEditScreen(this));
                             }
                         })
-                .dimensions(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
+                .bounds(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
                 .build());
         y += ROW_HEIGHT + 12;
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Reset to Defaults"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), btn -> {
                     config.resetHudDefaults();
                     config.save();
-                    this.clearAndInit();
+                    this.rebuildWidgets();
                 })
-                .dimensions(centerX - 100, y, 200, 20)
+                .bounds(centerX - 100, y, 200, 20)
                 .build());
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Done"), btn -> this.close())
-                .dimensions(centerX - 100, this.height - 28, 200, 20)
+        this.addRenderableWidget(Button.builder(Component.literal("Done"), btn -> this.onClose())
+                .bounds(centerX - 100, this.height - 28, 200, 20)
                 .build());
     }
 
@@ -70,15 +69,15 @@ public class TibiaChatConfigScreen extends Screen {
         int fieldX = sliderX + SLIDER_WIDTH + FIELD_GAP;
 
         ValueSlider slider = new ValueSlider(sliderX, y, SLIDER_WIDTH, 20, min, max, initial, wholeNumber,
-                v -> Text.literal(label + ": " + String.format(Locale.ROOT, format, v)),
+                v -> Component.literal(label + ": " + String.format(Locale.ROOT, format, v)),
                 v -> {
                     apply.accept(v);
                     config.save();
                 });
 
-        TextFieldWidget field = new TextFieldWidget(this.textRenderer, fieldX, y, FIELD_WIDTH, 20, Text.literal(label));
-        field.setText(String.format(Locale.ROOT, wholeNumber ? "%.0f" : "%.2f", initial));
-        field.setChangedListener(text -> {
+        EditBox field = new EditBox(this.font, fieldX, y, FIELD_WIDTH, 20, Component.literal(label));
+        field.setValue(String.format(Locale.ROOT, wholeNumber ? "%.0f" : "%.2f", initial));
+        field.setResponder(text -> {
             try {
                 double parsed = Double.parseDouble(text.trim());
                 double clamped = Math.max(min, Math.min(max, parsed));
@@ -89,22 +88,22 @@ public class TibiaChatConfigScreen extends Screen {
             }
         });
 
-        this.addDrawableChild(slider);
-        this.addDrawableChild(field);
+        this.addRenderableWidget(slider);
+        this.addRenderableWidget(field);
         return y + ROW_HEIGHT;
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFFFF);
+        context.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         config.save();
-        if (this.client != null) {
-            this.client.setScreen(parent);
+        if (this.minecraft != null) {
+            this.minecraft.setScreen(parent);
         }
     }
 }

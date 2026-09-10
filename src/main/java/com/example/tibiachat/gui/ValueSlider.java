@@ -1,10 +1,9 @@
 package com.example.tibiachat.gui;
 
-import net.minecraft.client.gui.widget.SliderWidget;
-import net.minecraft.text.Text;
-
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
+import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.network.chat.Component;
 
 /**
  * A vanilla slider paired with an optional manual-entry text field elsewhere
@@ -12,17 +11,17 @@ import java.util.function.DoubleFunction;
  * screen can also push a value in from a text field via
  * {@link #setRealValueSilently(double)} without re-triggering the callback.
  */
-public class ValueSlider extends SliderWidget {
+public class ValueSlider extends AbstractSliderButton {
     private final double min;
     private final double max;
     private final boolean wholeNumber;
-    private final DoubleFunction<Text> messageFactory;
+    private final DoubleFunction<Component> messageFactory;
     private final DoubleConsumer onChange;
 
     public ValueSlider(int x, int y, int width, int height, double min, double max,
                         double initialValue, boolean wholeNumber,
-                        DoubleFunction<Text> messageFactory, DoubleConsumer onChange) {
-        super(x, y, width, height, Text.empty(), normalize(initialValue, min, max));
+                        DoubleFunction<Component> messageFactory, DoubleConsumer onChange) {
+        super(x, y, width, height, Component.empty(), normalize(initialValue, min, max));
         this.min = min;
         this.max = max;
         this.wholeNumber = wholeNumber;

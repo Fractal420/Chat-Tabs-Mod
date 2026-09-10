@@ -1,11 +1,11 @@
 package com.example.tibiachat.chat;
 
-import net.minecraft.text.Text;
 import java.time.Instant;
 import java.util.UUID;
+import net.minecraft.network.chat.Component;
 
 public record ChatMessage(
-    Text component,
+    Component component,
     MessageType type,
     String speakerName,
     UUID speakerUuid,

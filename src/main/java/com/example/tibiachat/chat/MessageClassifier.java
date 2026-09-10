@@ -2,9 +2,9 @@ package com.example.tibiachat.chat;
 
 import com.example.tibiachat.config.TibiaChatConfig;
 import com.mojang.authlib.GameProfile;
-import net.minecraft.text.Text;
 import java.util.*;
 import java.util.regex.*;
+import net.minecraft.network.chat.Component;
 
 public final class MessageClassifier {
     private final TibiaChatConfig config;
@@ -24,7 +24,7 @@ public final class MessageClassifier {
         this.config = config;
     }
 
-    public Classification incoming(Text message, GameProfile sender) {
+    public Classification incoming(Component message, GameProfile sender) {
         String raw = message.getString();
 
         Matcher echo = SELF_ECHO.matcher(raw);

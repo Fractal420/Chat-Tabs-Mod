@@ -4,14 +4,14 @@ import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.chat.Conversation;
 import com.example.tibiachat.chat.ConversationManager;
 import com.example.tibiachat.hud.HudLayout;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.ChatHud;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class ChatScreenTabBarMixin {
 
     @Shadow
-    protected TextFieldWidget chatField;
+    protected EditBox input;
 
     private static final int TAB_W_MAIN_BASE = 50;
     private static final int TAB_W_MIN_BASE = 60;
@@ -38,25 +38,25 @@ public abstract class ChatScreenTabBarMixin {
         return Math.round(TAB_W_MAIN_BASE * HudLayout.tabTextScale());
     }
 
-    private int tibiaChatTabs$tabWidth(MinecraftClient mc, String label) {
+    private int tibiaChatTabs$tabWidth(Minecraft mc, String label) {
         float scale = HudLayout.tabTextScale();
-        int baseW = mc.textRenderer.getWidth(label) + 24;
+        int baseW = mc.font.width(label) + 24;
         int clampedBase = Math.max(TAB_W_MIN_BASE, Math.min(TAB_W_MAX_BASE, baseW));
         return Math.round(clampedBase * scale);
     }
 
     @Inject(method = "render", at = @At("TAIL"))
     private void tibiaChatTabs$drawTabs(
-            DrawContext ctx,
+            GuiGraphics ctx,
             int mouseX,
             int mouseY,
             float delta,
             CallbackInfo ci
     ) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
 
-        int screenW = mc.getWindow().getScaledWidth();
-        int screenH = mc.getWindow().getScaledHeight();
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
 
         int left = HudLayout.tabBarLeft();
         int right = HudLayout.tabBarRight(screenW);
@@ -121,16 +121,16 @@ public abstract class ChatScreenTabBarMixin {
 
         if (tibiaChatTabs$tabScroll > 0) {
             ctx.fill(tabsLeft, top, tabsLeft + 8, bottom, 0xCC101010);
-            ctx.drawTextWithShadow(mc.textRenderer, Text.literal("‹"), tabsLeft + 1, top + 3, 0xFFFFFFFF);
+            ctx.drawString(mc.font, Component.literal("‹"), tabsLeft + 1, top + 3, 0xFFFFFFFF);
         }
 
         if (tibiaChatTabs$tabScroll < maxScroll) {
             ctx.fill(tabsRight - 8, top, tabsRight, bottom, 0xCC101010);
-            ctx.drawTextWithShadow(mc.textRenderer, Text.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF);
+            ctx.drawString(mc.font, Component.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF);
         }
     }
 
-    private int tibiaChatTabs$totalTabsWidth(MinecraftClient mc) {
+    private int tibiaChatTabs$totalTabsWidth(Minecraft mc) {
         int width = 0;
         for (Conversation c : TibiaChatTabsClient.CHAT.conversations().all()) {
             width += tibiaChatTabs$tabWidth(mc, c.playerName());
@@ -138,13 +138,13 @@ public abstract class ChatScreenTabBarMixin {
         return width;
     }
 
-    private int tibiaChatTabs$maxTabScroll(MinecraftClient mc, int tabsLeft, int tabsRight) {
+    private int tibiaChatTabs$maxTabScroll(Minecraft mc, int tabsLeft, int tabsRight) {
         int availableWidth = Math.max(0, tabsRight - tabsLeft);
         int totalWidth = tibiaChatTabs$totalTabsWidth(mc);
         return Math.max(0, totalWidth - availableWidth);
     }
 
-    private void tibiaChatTabs$clampTabScroll(MinecraftClient mc, int tabsLeft, int tabsRight) {
+    private void tibiaChatTabs$clampTabScroll(Minecraft mc, int tabsLeft, int tabsRight) {
         int maxScroll = tibiaChatTabs$maxTabScroll(mc, tabsLeft, tabsRight);
         if (tibiaChatTabs$tabScroll < 0) {
             tibiaChatTabs$tabScroll = 0;
@@ -155,8 +155,8 @@ public abstract class ChatScreenTabBarMixin {
     }
 
     private int tibiaChatTabs$drawTab(
-            DrawContext ctx,
-            MinecraftClient mc,
+            GuiGraphics ctx,
+            Minecraft mc,
             String label,
             String key,
             int x,
@@ -187,31 +187,31 @@ public abstract class ChatScreenTabBarMixin {
         int closePadding = hover && !ConversationManager.MAIN.equals(key) ? Math.round((CLOSE_SIZE + 6) * textScale) : Math.round(5 * textScale);
         int maxTextWidth = w - closePadding - Math.round(4 * textScale);
 
-        if (maxTextWidth > 0 && Math.round(mc.textRenderer.getWidth(shown) * textScale) > maxTextWidth) {
-            shown = mc.textRenderer.trimToWidth(shown, Math.max(1, Math.round((maxTextWidth - Math.round(8 * textScale)) / textScale))) + "…";
+        if (maxTextWidth > 0 && Math.round(mc.font.width(shown) * textScale) > maxTextWidth) {
+            shown = mc.font.plainSubstrByWidth(shown, Math.max(1, Math.round((maxTextWidth - Math.round(8 * textScale)) / textScale))) + "…";
         }
 
-        ctx.getMatrices().pushMatrix();
-        ctx.getMatrices().translate(x + Math.round(5 * textScale), top + 4);
-        ctx.getMatrices().scale(textScale, textScale);
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(x + Math.round(5 * textScale), top + 4);
+        ctx.pose().scale(textScale, textScale);
 
-        ctx.drawTextWithShadow(
-                mc.textRenderer,
-                Text.literal(shown),
+        ctx.drawString(
+                mc.font,
+                Component.literal(shown),
                 0,
                 0,
                 unread > 0 ? 0xFFFFD24A : 0xFFFFFFFF
         );
 
-        ctx.getMatrices().popMatrix();
+        ctx.pose().popMatrix();
 
         if (hover && !ConversationManager.MAIN.equals(key)) {
             int closeX = x + w - Math.round((CLOSE_SIZE + 2) * textScale);
             int closeY = top + 4;
 
-            ctx.drawTextWithShadow(
-                    mc.textRenderer,
-                    Text.literal("×"),
+            ctx.drawString(
+                    mc.font,
+                    Component.literal("×"),
                     closeX,
                     closeY - 1,
                     0xFFFFFFFF
@@ -252,10 +252,10 @@ public abstract class ChatScreenTabBarMixin {
             double verticalAmount,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
 
-        int screenW = mc.getWindow().getScaledWidth();
-        int screenH = mc.getWindow().getScaledHeight();
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
 
         int left = HudLayout.tabBarLeft();
         int right = HudLayout.tabBarRight(screenW);
@@ -292,7 +292,7 @@ public abstract class ChatScreenTabBarMixin {
             require = 0
     )
     private void tibiaChatTabs$onClick(
-            Click click,
+            MouseButtonEvent click,
             boolean doubled,
             CallbackInfoReturnable<Boolean> cir
     ) {
@@ -300,10 +300,10 @@ public abstract class ChatScreenTabBarMixin {
             return;
         }
 
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
 
-        int screenW = mc.getWindow().getScaledWidth();
-        int screenH = mc.getWindow().getScaledHeight();
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
 
         int left = HudLayout.tabBarLeft();
         int right = HudLayout.tabBarRight(screenW);
@@ -381,8 +381,8 @@ public abstract class ChatScreenTabBarMixin {
     }
 
     private void tibiaChatTabs$clampTabScrollAfterClose() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        int screenW = mc.getWindow().getScaledWidth();
+        Minecraft mc = Minecraft.getInstance();
+        int screenW = mc.getWindow().getGuiScaledWidth();
 
         int left = HudLayout.tabBarLeft();
         int right = HudLayout.tabBarRight(screenW);
@@ -400,8 +400,8 @@ public abstract class ChatScreenTabBarMixin {
 
         TibiaChatTabsClient.CHAT.select(key);
 
-        ChatHud hud = MinecraftClient.getInstance().inGameHud.getChatHud();
-        hud.clear(false);
+        ChatComponent hud = Minecraft.getInstance().gui.getChat();
+        hud.clearMessages(false);
 
         for (var msg : TibiaChatTabsClient.CHAT.selectedMessages()) {
             hud.addMessage(msg.component());
@@ -411,8 +411,8 @@ public abstract class ChatScreenTabBarMixin {
     }
 
     private void tibiaChatTabs$scrollSelectedIntoView() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        int screenW = mc.getWindow().getScaledWidth();
+        Minecraft mc = Minecraft.getInstance();
+        int screenW = mc.getWindow().getGuiScaledWidth();
 
         int left = HudLayout.tabBarLeft();
         int right = HudLayout.tabBarRight(screenW);
@@ -457,7 +457,7 @@ public abstract class ChatScreenTabBarMixin {
             require = 0
     )
     private void tibiaChatTabs$onKey(
-            KeyInput input,
+            KeyEvent input,
             CallbackInfoReturnable<Boolean> cir
     ) {
         if (input.key() != GLFW.GLFW_KEY_ENTER && input.key() != GLFW.GLFW_KEY_KP_ENTER) {
@@ -470,17 +470,17 @@ public abstract class ChatScreenTabBarMixin {
         }
 
         Conversation c = TibiaChatTabsClient.CHAT.conversations().getByKey(key);
-        if (c == null || chatField == null) {
+        if (c == null || this.input == null) {
             return;
         }
 
-        String text = chatField.getText().trim();
+        String text = this.input.getValue().trim();
         if (text.isEmpty()) {
             cir.setReturnValue(true);
             return;
         }
 
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
             return;
         }
@@ -489,8 +489,8 @@ public abstract class ChatScreenTabBarMixin {
         String body = whisperCmd + " " + c.playerName() + " " + text;
         String command = body.startsWith("/") ? body.substring(1) : body;
 
-        mc.player.networkHandler.sendChatCommand(command);
-        chatField.setText("");
+        mc.player.connection.sendCommand(command);
+        this.input.setValue("");
 
         cir.setReturnValue(true);
     }
