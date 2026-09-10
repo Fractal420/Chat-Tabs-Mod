@@ -93,30 +93,10 @@ Edit this file (while the game is closed, or restart afterward) to adapt the mod
 
 The built jar (and sources jar) will be in `build/libs/`.
 
-## Project structure
-
-```
-src/main/java/com/example/tibiachat/
-├── TibiaChatTabsClient.java     # Mod entrypoint, event registration, HUD unread badge
-├── chat/
-│   ├── ChatManager.java         # Core message routing, echo de-duplication, outgoing whispers
-│   ├── ConversationManager.java # Tracks per-player Conversation objects
-│   ├── Conversation.java        # A single tab's messages, unread count, scroll state
-│   ├── ChatMessage.java         # A stored, timestamped chat line
-│   ├── MessageClassifier.java   # Regex-based classification of chat lines
-│   ├── Classification.java      # Result of classifying a message
-│   └── MessageType.java         # PUBLIC / WHISPER_INCOMING / WHISPER_OUTGOING / SYSTEM / UNKNOWN
-├── config/
-│   └── TibiaChatConfig.java     # Loads/saves config/tibia_chat_tabs.json
-└── mixin/
-    └── ChatScreenTabBarMixin.java  # Renders the tab bar and handles clicks/scroll/Enter on ChatScreen
-```
-
 ## Limitations
 
 - Client-side only — it reorganizes what you see locally and doesn't change what the server sends.
 - Whisper detection depends on matching the server's exact chat phrasing; servers using different wording will need custom `incomingWhisperRegexes`.
-- Tabs and unread counts are not persisted between game sessions.
 
 ## License
 
