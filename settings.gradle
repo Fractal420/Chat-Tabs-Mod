@@ -20,6 +20,11 @@ dependencyResolutionManagement {
             url = "https://libraries.minecraft.net/"
         }
 
+        maven {
+            name = "TerraformersMC"
+            url = "https://maven.terraformersmc.com/"
+        }
+
         mavenCentral()
     }
 }

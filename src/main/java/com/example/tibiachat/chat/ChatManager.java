@@ -94,7 +94,9 @@ public final class ChatManager {
             c.add(cm);
             main.add(cm);
 
-            if (!c.key().equals(selectedKey)) c.markUnread();
+            if (!c.key().equals(selectedKey)) {
+                c.markUnread();
+            }
 
             return c.key();
         }
@@ -176,9 +178,10 @@ public final class ChatManager {
     ) {
         Text withTime = text;
 
-        if (type == MessageType.WHISPER_INCOMING
+        String raw = text.getString();
+        if (!raw.startsWith("[") && (type == MessageType.WHISPER_INCOMING
             || type == MessageType.PUBLIC
-            || type == MessageType.SYSTEM) {
+            || type == MessageType.SYSTEM)) {
             withTime = Text.literal("[")
                 .append(Text.literal(TIME.format(
                     at.atZone(ZoneId.systemDefault()).toLocalTime()

@@ -6,12 +6,18 @@
   "icon": "assets/chat_tabs/icon.png",
   "description": "Client-side Fabric chat tabs with private conversations. Made for 6b6t Anarchy Server",
   "environment": "client",
-  "entrypoints": { "client": ["com.example.tibiachat.TibiaChatTabsClient"] },
+  "entrypoints": {
+    "client": ["com.example.tibiachat.TibiaChatTabsClient"],
+    "modmenu": ["com.example.tibiachat.integration.ModMenuIntegration"]
+  },
   "mixins": ["tibia_chat_tabs.mixins.json"],
   "depends": {
     "fabricloader": ">=0.17.0",
     "minecraft": "~1.21.11",
     "java": ">=21",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
   }
 }
