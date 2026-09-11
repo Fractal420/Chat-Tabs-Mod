@@ -4,7 +4,6 @@ import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.config.TibiaChatConfig;
 import com.mojang.authlib.GameProfile;
 import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -16,7 +15,6 @@ public final class ChatManager {
     private final List<ChatMessage> main = new ArrayList<>();
     private final Deque<PendingEcho> pendingEchoes = new ArrayDeque<>();
     private String selectedKey = ConversationManager.MAIN;
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
     public List<ChatMessage> main() {
         return Collections.unmodifiableList(main);
@@ -126,10 +124,7 @@ public final class ChatManager {
 
             String fp = fingerprint(out.playerName(), out.body());
 
-            Component rendered = Component.literal("[")
-                .append(Component.literal(TIME.format(LocalTime.now())))
-                .append(Component.literal("] "))
-                .append(Component.literal("You: "))
+            Component rendered = Component.literal("You: ")
                 .append(Component.literal(out.body()));
 
             ChatMessage cm = make(
@@ -175,21 +170,11 @@ public final class ChatManager {
         Instant at,
         String fp
     ) {
-        Component withTime = text;
-
-        String raw = text.getString();
-        if (!raw.startsWith("[") && (type == MessageType.WHISPER_INCOMING
-            || type == MessageType.PUBLIC
-            || type == MessageType.SYSTEM)) {
-            withTime = Component.literal("[")
-                .append(Component.literal(TIME.format(
-                    at.atZone(ZoneId.systemDefault()).toLocalTime()
-                )))
-                .append(Component.literal("] "))
-                .append(text);
-        }
-
-        return new ChatMessage(withTime, type, name, uuid, key, at, fp);
+        // This mod no longer adds its own timestamp prefix to messages.
+        // The original text (which may already carry a timestamp added by
+        // another mod, e.g. via a chat-time or vanilla setting) is passed
+        // through untouched.
+        return new ChatMessage(text, type, name, uuid, key, at, fp);
     }
 
     private String fingerprint(String name, String body) {
