@@ -1,0 +1,68 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.17-SNAPSHOT'
+    id 'maven-publish'
+}
+
+version = "${rootProject.mod_version}-${minecraft_version}"
+group = rootProject.maven_group
+
+base {
+    archivesName = rootProject.archives_base_name
+}
+
+repositories {
+    maven { name = "Fabric"; url = "https://maven.fabricmc.net/" }
+    maven { name = "Mojang"; url = "https://libraries.minecraft.net/" }
+    maven { name = "TerraformersMC"; url = "https://maven.terraformersmc.com/" }
+    maven { name = "Nucleoid"; url = "https://maven.nucleoid.xyz/" }
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    compileOnly "com.terraformersmc:modmenu:${modmenu_version}"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ["${project.projectDir}/src/main/java"]
+        }
+        resources {
+            srcDirs = [
+                "${project.projectDir}/src/main/resources",
+                "${rootProject.projectDir}/src/main/resources"
+            ]
+        }
+    }
+}
+
+processResources {
+    def ver = version
+    def mc = minecraft_version
+    inputs.property "version", ver
+    inputs.property "minecraft_version", mc
+    filesMatching("fabric.mod.json") {
+        expand "version": ver, "minecraft_version": mc
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = "UTF-8"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+    withSourcesJar()
+}
+
+jar {
+    def baseName = rootProject.archives_base_name
+    from("${rootProject.projectDir}/LICENSE") {
+        rename { original -> "${original}_${baseName}" }
+    }
+}

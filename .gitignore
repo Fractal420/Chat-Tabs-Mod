@@ -1,9 +1,17 @@
 .gradle/
 .gradle-dist/
+**/.gradle/
 
-build/*
+# --- Build output ---
+# Ignore all build contents (classes, reports, intermediates, …)
+build/**
+versions/*/build/**
+
+# …but keep the finished mod jars so the newest builds are always in git
 !build/libs/
 !build/libs/*.jar
+!versions/*/build/libs/
+!versions/*/build/libs/*.jar
 
 !gradle/wrapper/gradle-wrapper.jar
 
@@ -29,7 +37,9 @@ Thumbs.db
 *.class
 
 run/
+**/run/
 logs/
+**/logs/
 
 .env
 .env.*

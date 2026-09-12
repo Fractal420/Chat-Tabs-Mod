@@ -1,52 +1,59 @@
-plugins {
-    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
-    id 'maven-publish'
+// Root project – does not produce a jar by itself.
+//
+// Build a specific Minecraft version with:
+//   ./gradlew build -Pmc=1.21.11
+//   ./gradlew build -Pmc=26.1
+//   ./gradlew build -Pmc=26.2
+//
+// Or target the sub-project directly:
+//   ./gradlew :1.21.11:build
+//   ./gradlew :26.1:build
+//   ./gradlew :26.2:build
+//
+// Build every version:
+//   ./gradlew buildAll
+
+tasks.register("buildAll") {
+    group = "build"
+    description = "Build the mod for every supported Minecraft version"
+    dependsOn(":1.21.11:build", ":26.1:build", ":26.2:build")
 }
 
-version = project.mod_version
-group = project.maven_group
+// Allow selecting a single version via -Pmc=... or -Pminecraft_version=...
+def selected = findProperty("mc") ?: findProperty("minecraft_version")
 
-base {
-    archivesName = project.archives_base_name
-}
-
-repositories {
-    maven {
-        name = "TerraformersMC"
-        url = "https://maven.terraformersmc.com/"
+if (selected != null) {
+    def targetPath = ":${selected}"
+    tasks.register("build") {
+        group = "build"
+        description = "Build the selected Minecraft version (${selected})"
+        dependsOn("${targetPath}:build")
+        doLast {
+            copy {
+                from project(targetPath).layout.buildDirectory.dir("libs")
+                into layout.buildDirectory.dir("libs")
+                include "*.jar"
+            }
+            logger.lifecycle("Built jars for ${selected} are in build/libs/ and versions/${selected}/build/libs/")
+        }
     }
-}
+} else {
+    tasks.register("build") {
+        group = "build"
+        description = "Print build help (no -Pmc given)"
+        doLast {
+            logger.lifecycle("""
+No Minecraft version selected.
 
-dependencies {
-    minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:${loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
-    modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
-}
-
-processResources {
-    def ver = version
-    inputs.property "version", ver
-    filesMatching("fabric.mod.json") {
-        expand "version": ver
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.release = 21
-    options.encoding = "UTF-8"
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-    withSourcesJar()
-}
-
-jar {
-    def baseName = project.archives_base_name
-    from("LICENSE") {
-        rename { original -> "${original}_${baseName}" }
+Usage examples:
+  ./gradlew build -Pmc=1.21.11
+  ./gradlew build -Pmc=26.1
+  ./gradlew build -Pmc=26.2
+  ./gradlew :1.21.11:build
+  ./gradlew :26.1:build
+  ./gradlew :26.2:build
+  ./gradlew buildAll
+""")
+        }
     }
 }
