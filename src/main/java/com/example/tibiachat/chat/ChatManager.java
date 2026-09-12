@@ -170,10 +170,6 @@ public final class ChatManager {
         Instant at,
         String fp
     ) {
-        // This mod no longer adds its own timestamp prefix to messages.
-        // The original text (which may already carry a timestamp added by
-        // another mod, e.g. via a chat-time or vanilla setting) is passed
-        // through untouched.
         return new ChatMessage(text, type, name, uuid, key, at, fp);
     }
 

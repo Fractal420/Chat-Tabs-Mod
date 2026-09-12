@@ -5,12 +5,6 @@ import java.util.function.DoubleFunction;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.network.chat.Component;
 
-/**
- * A vanilla slider paired with an optional manual-entry text field elsewhere
- * on the screen. Dragging the slider calls {@link #onChange}; the owning
- * screen can also push a value in from a text field via
- * {@link #setRealValueSilently(double)} without re-triggering the callback.
- */
 public class ValueSlider extends AbstractSliderButton {
     private final double min;
     private final double max;
@@ -40,7 +34,6 @@ public class ValueSlider extends AbstractSliderButton {
         return wholeNumber ? Math.round(v) : v;
     }
 
-    /** Pushes a value in from an external source (e.g. the manual text field) without re-firing onChange. */
     public void setRealValueSilently(double v) {
         this.value = normalize(v, min, max);
         updateMessage();

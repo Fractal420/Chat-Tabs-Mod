@@ -36,12 +36,6 @@ public final class ConversationManager {
     public void remove(String key) {
         conversations.remove(key);
     }
-
-    /**
-     * Snapshot of the current tab order as an indexable list. General chat
-     * ("Main") is not part of this manager, so it never appears here and is
-     * therefore never reordered.
-     */
     public List<Conversation> asList() {
         return new ArrayList<>(conversations.values());
     }
@@ -61,13 +55,6 @@ public final class ConversationManager {
 
         return -1;
     }
-
-    /**
-     * Moves the conversation with the given key to newIndex, shifting the
-     * others to make room. Used for drag-and-drop tab reordering. Silently
-     * does nothing if the key isn't a known conversation - this keeps it
-     * safe to call every frame while dragging without extra guards.
-     */
     public void moveToIndex(String key, int newIndex) {
         if (key == null || !conversations.containsKey(key)) {
             return;
