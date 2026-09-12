@@ -8,6 +8,10 @@ Built with **6b6t** (an anarchy server) in mind, where whisper spam can bury con
 https://github.com/user-attachments/assets/e0f0f37b-672b-439a-ab1e-5682ec3d714d
 
 
+https://github.com/user-attachments/assets/a5072759-06a7-42c3-9321-67958d752b90
+
+
+
 
 
 
