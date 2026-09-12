@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import java.util.List;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -31,8 +32,20 @@ public abstract class ChatScreenTabBarMixin {
     private static final int TAB_W_MAX_BASE = 120;
     private static final int TAB_SCROLL_STEP = 40;
     private static final int CLOSE_SIZE = 8;
+    private static final int DRAG_THRESHOLD = 4;
 
     private int tibiaChatTabs$tabScroll = 0;
+
+    // Drag-to-reorder state. dragKey is the conversation tab under the
+    // mouse since the last press; dragActive only becomes true once the
+    // mouse has moved past DRAG_THRESHOLD, so a plain click still just
+    // selects the tab. "Main" is never draggable, so dragKey is only ever
+    // set to a conversation key, never ConversationManager.MAIN.
+    private String tibiaChatTabs$dragKey = null;
+    private boolean tibiaChatTabs$dragActive = false;
+    private double tibiaChatTabs$dragPressX;
+    private double tibiaChatTabs$dragPressY;
+    private int tibiaChatTabs$dragPointerOffsetX;
 
     private int tibiaChatTabs$tabMainWidth() {
         return Math.round(TAB_W_MAIN_BASE * HudLayout.tabTextScale());
@@ -62,6 +75,11 @@ public abstract class ChatScreenTabBarMixin {
         int right = HudLayout.tabBarRight(screenW);
         int top = HudLayout.tabBarTop(screenH);
         int bottom = HudLayout.tabBarBottom(screenH);
+
+        // ChatScreen does not override mouseDragged in 1.21.11, so the
+        // inject into that method never runs. Drive live reorder from
+        // render while the left button is held instead.
+        tibiaChatTabs$tickDrag(mc, mouseX, mouseY, left, right, top, bottom);
 
         ctx.fill(left, top, right, bottom, 0xB0101010);
 
@@ -94,10 +112,21 @@ public abstract class ChatScreenTabBarMixin {
 
             int tabX = tabsLeft - tibiaChatTabs$tabScroll;
 
+            Conversation dragged = null;
+            int draggedW = 0;
+
             for (Conversation c : TibiaChatTabsClient.CHAT.conversations().all()) {
                 int w = tibiaChatTabs$tabWidth(mc, c.playerName());
 
-                if (tabX + w > tabsLeft && tabX < tabsRight) {
+                boolean isDragged = tibiaChatTabs$dragActive && c.key().equals(tibiaChatTabs$dragKey);
+
+                if (isDragged) {
+                    // Reserve the slot's width so the rest of the tabs keep
+                    // their normal spacing, but draw this one afterwards so
+                    // it floats on top of everything else.
+                    dragged = c;
+                    draggedW = w;
+                } else if (tabX + w > tabsLeft && tabX < tabsRight) {
                     tibiaChatTabs$drawTab(
                             ctx,
                             mc,
@@ -116,17 +145,36 @@ public abstract class ChatScreenTabBarMixin {
                 tabX += w;
             }
 
+            if (dragged != null) {
+                int floatX = (int) Math.round(mouseX - tibiaChatTabs$dragPointerOffsetX);
+                floatX = Math.max(tabsLeft, Math.min(tabsRight - draggedW, floatX));
+
+                tibiaChatTabs$drawTab(
+                        ctx,
+                        mc,
+                        dragged.playerName(),
+                        dragged.key(),
+                        floatX,
+                        draggedW,
+                        top,
+                        bottom,
+                        mouseX,
+                        mouseY,
+                        dragged.unread()
+                );
+            }
+
             ctx.disableScissor();
         }
 
         if (tibiaChatTabs$tabScroll > 0) {
             ctx.fill(tabsLeft, top, tabsLeft + 8, bottom, 0xCC101010);
-            ctx.drawString(mc.font, Component.literal("‹"), tabsLeft + 1, top + 3, 0xFFFFFFFF);
+            ctx.drawString(mc.font, Component.literal("‹"), tabsLeft + 1, top + 3, 0xFFFFFFFF, true);
         }
 
         if (tibiaChatTabs$tabScroll < maxScroll) {
             ctx.fill(tabsRight - 8, top, tabsRight, bottom, 0xCC101010);
-            ctx.drawString(mc.font, Component.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF);
+            ctx.drawString(mc.font, Component.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF, true);
         }
     }
 
@@ -200,7 +248,8 @@ public abstract class ChatScreenTabBarMixin {
                 Component.literal(shown),
                 0,
                 0,
-                unread > 0 ? 0xFFFFD24A : 0xFFFFFFFF
+                unread > 0 ? 0xFFFFD24A : 0xFFFFFFFF,
+                true
         );
 
         ctx.pose().popMatrix();
@@ -214,7 +263,8 @@ public abstract class ChatScreenTabBarMixin {
                     Component.literal("×"),
                     closeX,
                     closeY - 1,
-                    0xFFFFFFFF
+                    0xFFFFFFFF,
+                    true
             );
         }
 
@@ -318,6 +368,9 @@ public abstract class ChatScreenTabBarMixin {
         int x = left + 2;
 
         if (click.x() >= x && click.x() < x + mainW) {
+            // General chat is never draggable.
+            tibiaChatTabs$dragKey = null;
+            tibiaChatTabs$dragActive = false;
             tibiaChatTabs$select(ConversationManager.MAIN);
             cir.setReturnValue(true);
             return;
@@ -350,6 +403,15 @@ public abstract class ChatScreenTabBarMixin {
                 if (tibiaChatTabs$isCloseHovered(click.x(), click.y(), tabX, w, top, bottom)) {
                     tibiaChatTabs$closeTab(c.key());
                 } else {
+                    // Arm a potential drag on this tab. It only becomes an
+                    // actual reorder once the mouse moves past the
+                    // threshold (checked every frame in render); a plain
+                    // click here still just selects the tab as before.
+                    tibiaChatTabs$dragKey = c.key();
+                    tibiaChatTabs$dragActive = false;
+                    tibiaChatTabs$dragPressX = click.x();
+                    tibiaChatTabs$dragPressY = click.y();
+                    tibiaChatTabs$dragPointerOffsetX = (int) Math.round(click.x() - tabX);
                     tibiaChatTabs$select(c.key());
                 }
                 cir.setReturnValue(true);
@@ -360,7 +422,121 @@ public abstract class ChatScreenTabBarMixin {
         }
     }
 
+    @Inject(
+            method = "mouseReleased",
+            at = @At("HEAD"),
+            cancellable = true,
+            require = 0
+    )
+    private void tibiaChatTabs$onMouseReleased(
+            MouseButtonEvent click,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (tibiaChatTabs$dragKey == null) {
+            return;
+        }
+
+        boolean wasDragging = tibiaChatTabs$dragActive;
+
+        tibiaChatTabs$dragKey = null;
+        tibiaChatTabs$dragActive = false;
+
+        if (wasDragging) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    /**
+     * Live drag/reorder driver. ChatScreen does not override mouseDragged
+     * in this version, so we poll button state from render instead.
+     * Tabs only reorder left/right inside the tab bar; Main is never moved.
+     */
+    private void tibiaChatTabs$tickDrag(
+            Minecraft mc,
+            int mouseX,
+            int mouseY,
+            int left,
+            int right,
+            int top,
+            int bottom
+    ) {
+        if (tibiaChatTabs$dragKey == null) {
+            return;
+        }
+
+        long window = mc.getWindow().handle();
+        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+
+        if (!leftDown) {
+            tibiaChatTabs$dragKey = null;
+            tibiaChatTabs$dragActive = false;
+            return;
+        }
+
+        if (!tibiaChatTabs$dragActive) {
+            double dx = mouseX - tibiaChatTabs$dragPressX;
+            double dy = mouseY - tibiaChatTabs$dragPressY;
+            if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) {
+                return;
+            }
+            tibiaChatTabs$dragActive = true;
+        }
+
+        int tabsLeft = left + 2 + tibiaChatTabs$tabMainWidth();
+        int tabsRight = right - 4;
+
+        // Horizontal only; clamp pointer to the tab strip so vertical
+        // mouse movement never affects order.
+        double pointerX = Math.max(tabsLeft, Math.min(tabsRight, (double) mouseX));
+
+        tibiaChatTabs$updateDragOrder(mc, tabsLeft, tabsRight, pointerX);
+    }
+
+    private void tibiaChatTabs$updateDragOrder(Minecraft mc, int tabsLeft, int tabsRight, double pointerX) {
+        ConversationManager conversations = TibiaChatTabsClient.CHAT.conversations();
+        List<Conversation> order = conversations.asList();
+
+        int currentIndex = -1;
+        for (int i = 0; i < order.size(); i++) {
+            if (order.get(i).key().equals(tibiaChatTabs$dragKey)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex < 0) {
+            return;
+        }
+
+        // Walk the tabs in their current visual order (respecting scroll)
+        // and find which slot the pointer now sits over, swapping to that
+        // slot the moment the pointer crosses a neighboring tab's midpoint.
+        double x = tabsLeft - tibiaChatTabs$tabScroll;
+        int targetIndex = order.size() - 1;
+
+        for (int i = 0; i < order.size(); i++) {
+            int w = tibiaChatTabs$tabWidth(mc, order.get(i).playerName());
+            double mid = x + w / 2.0;
+
+            if (pointerX < mid) {
+                targetIndex = i;
+                break;
+            }
+
+            x += w;
+        }
+
+        if (targetIndex != currentIndex) {
+            conversations.moveToIndex(tibiaChatTabs$dragKey, targetIndex);
+        }
+    }
+
     private void tibiaChatTabs$closeTab(String key) {
+        if (key.equals(tibiaChatTabs$dragKey)) {
+            tibiaChatTabs$dragKey = null;
+            tibiaChatTabs$dragActive = false;
+        }
+
         String selectedKey = TibiaChatTabsClient.CHAT.selectedKey();
         boolean selected = key.equals(selectedKey);
 

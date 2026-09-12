@@ -53,7 +53,7 @@ public class HudEditScreen extends Screen {
         int iconH = HudLayout.notifIconHeight();
 
         context.fill(iconX - 3, iconY - 2, iconX + iconW, iconY + iconH, 0xB0C77A2A);
-        context.drawString(this.font, Component.literal(sample), iconX, iconY, 0xFFFFD24A);
+        context.drawString(this.font, Component.literal(sample), iconX, iconY, 0xFFFFD24A, true);
 
         context.drawCenteredString(this.font,
                 Component.literal("Drag elements to move anywhere. Drag tab bar right edge to resize length."),

@@ -36,4 +36,68 @@ public final class ConversationManager {
     public void remove(String key) {
         conversations.remove(key);
     }
+
+    /**
+     * Snapshot of the current tab order as an indexable list. General chat
+     * ("Main") is not part of this manager, so it never appears here and is
+     * therefore never reordered.
+     */
+    public List<Conversation> asList() {
+        return new ArrayList<>(conversations.values());
+    }
+
+    public int indexOf(String key) {
+        if (key == null) {
+            return -1;
+        }
+
+        int i = 0;
+        for (String k : conversations.keySet()) {
+            if (k.equals(key)) {
+                return i;
+            }
+            i++;
+        }
+
+        return -1;
+    }
+
+    /**
+     * Moves the conversation with the given key to newIndex, shifting the
+     * others to make room. Used for drag-and-drop tab reordering. Silently
+     * does nothing if the key isn't a known conversation - this keeps it
+     * safe to call every frame while dragging without extra guards.
+     */
+    public void moveToIndex(String key, int newIndex) {
+        if (key == null || !conversations.containsKey(key)) {
+            return;
+        }
+
+        List<Map.Entry<String, Conversation>> entries = new ArrayList<>(conversations.entrySet());
+
+        int oldIndex = -1;
+        for (int i = 0; i < entries.size(); i++) {
+            if (entries.get(i).getKey().equals(key)) {
+                oldIndex = i;
+                break;
+            }
+        }
+
+        if (oldIndex < 0) {
+            return;
+        }
+
+        int clampedIndex = Math.max(0, Math.min(entries.size() - 1, newIndex));
+        if (clampedIndex == oldIndex) {
+            return;
+        }
+
+        Map.Entry<String, Conversation> moved = entries.remove(oldIndex);
+        entries.add(clampedIndex, moved);
+
+        conversations.clear();
+        for (Map.Entry<String, Conversation> entry : entries) {
+            conversations.put(entry.getKey(), entry.getValue());
+        }
+    }
 }

@@ -11,7 +11,8 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -67,7 +68,11 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
             }
         });
 
-        HudRenderCallback.EVENT.register(this::renderUnreadBadge);
+        HudElementRegistry.attachElementAfter(
+                VanillaHudElements.CHAT,
+                Identifier.fromNamespaceAndPath(MOD_ID, "unread_badge"),
+                this::renderUnreadBadge
+        );
     }
 
     private void renderUnreadBadge(GuiGraphics ctx, DeltaTracker tickCounter) {
@@ -90,7 +95,7 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
         ctx.pose().scale(scale, scale);
 
         ctx.fill(-3, -2, textWidth + 3, 10, 0x90000000);
-        ctx.drawString(mc.font, Component.literal(label), 0, 0, 0xFFFFD24A);
+        ctx.drawString(mc.font, Component.literal(label), 0, 0, 0xFFFFD24A, true);
 
         ctx.pose().popMatrix();
     }
