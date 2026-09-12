@@ -88,10 +88,16 @@ Edit this file (while the game is closed, or restart afterward) to adapt the mod
 ## Building from source
 
 ```bash
-./gradlew build
+./gradlew buildAll
 ```
+or if you don't want all versions, you can choose: 
 
-The built jar (and sources jar) will be in `build/libs/`.
+```bash
+./gradlew :1.21.11:build
+./gradlew :26.1:build
+./gradlew :26.2:build
+```
+The built jar (and sources jar) will be in `versions/<version>/build/libs/`.
 
 ## Limitations
 
