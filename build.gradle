@@ -5,7 +5,10 @@ plugins {
 
 version = project.mod_version
 group = project.maven_group
-base { archivesName = project.archives_base_name }
+
+base {
+    archivesName = project.archives_base_name
+}
 
 repositories {
     maven {
@@ -19,20 +22,31 @@ dependencies {
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
-
     modCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
 }
 
 processResources {
-    inputs.property "version", project.version
-    filesMatching("fabric.mod.json") { expand "version": project.version }
+    def ver = version
+    inputs.property "version", ver
+    filesMatching("fabric.mod.json") {
+        expand "version": ver
+    }
 }
+
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    options.release = 21
+    options.encoding = "UTF-8"
 }
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
     withSourcesJar()
 }
-jar { from("LICENSE") { rename { "${it}_${project.archives_base_name}" } } }
+
+jar {
+    def baseName = project.archives_base_name
+    from("LICENSE") {
+        rename { original -> "${original}_${baseName}" }
+    }
+}
