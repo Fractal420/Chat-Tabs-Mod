@@ -9,15 +9,27 @@ import net.minecraft.network.chat.Component;
 public final class MessageClassifier {
     private final TibiaChatConfig config;
 
+    // Some servers prefix chat names with a rank/head icon (a short run of glyphs
+    // that aren't part of the player name) before the name itself, e.g. "\u2b06 Steve whispers: hi".
+    // This fragment optionally skips over that icon wherever a name is expected.
+    private static final String ICON_PREFIX = TibiaChatConfig.iconPrefixFragment();
+
     private static final Pattern SELF_ECHO = Pattern.compile(
-        "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?(?:You|you)\\s+whispers?(?:ed)?\\s+to\\s+([a-zA-Z0-9_]{2,16}):[ \\u00a0]*(.*)$",
+        "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "(?:You|you)\\s+whispers?(?:ed)?\\s+to\\s+"
+            + ICON_PREFIX + "([a-zA-Z0-9_]{2,16}):[ \\u00a0]*(.*)$",
         Pattern.CASE_INSENSITIVE | Pattern.DOTALL
     );
 
     private static final List<Pattern> INCOMING = List.of(
-        Pattern.compile("^(?:\\[\\d{2}:\\d{2}\\]\\s*)?\\[([a-zA-Z0-9_]{2,16})\\s*->\\s*(?:You|you)\\]\\s*:?[ \\u00a0]*(.*)$", Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
-        Pattern.compile("^(?:\\[\\d{2}:\\d{2}\\]\\s*)?([a-zA-Z0-9_]{2,16})\\s+whispers?(?: to you)?\\s*:?\\s*(.*)$", Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
-        Pattern.compile("^(?:\\[\\d{2}:\\d{2}\\]\\s*)?\\[(?:PM|MSG|WHISPER)\\]\\s*([a-zA-Z0-9_]{2,16})\\s*:\\s*(.*)$", Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
+        Pattern.compile("^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "\\[" + ICON_PREFIX
+            + "([a-zA-Z0-9_]{2,16})\\s*->\\s*" + ICON_PREFIX + "(?:You|you)\\]\\s*:?[ \\u00a0]*(.*)$",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
+        Pattern.compile("^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX
+            + "([a-zA-Z0-9_]{2,16})\\s+whispers?(?: to you)?\\s*:?\\s*(.*)$",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
+        Pattern.compile("^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "\\[(?:PM|MSG|WHISPER)\\]\\s*"
+            + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s*:\\s*(.*)$",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
     );
 
     public MessageClassifier(TibiaChatConfig config) {

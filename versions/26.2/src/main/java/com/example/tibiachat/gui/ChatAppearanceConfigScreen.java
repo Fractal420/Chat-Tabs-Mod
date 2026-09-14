@@ -3,75 +3,57 @@ package com.example.tibiachat.gui;
 import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.config.TibiaChatConfig;
 import java.util.Locale;
-import java.util.function.DoubleConsumer;
+import java.util.function.IntConsumer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-public class TibiaChatConfigScreen extends Screen {
+public class ChatAppearanceConfigScreen extends Screen {
 
     private static final int ROW_HEIGHT = 24;
     private static final int SLIDER_WIDTH = 200;
     private static final int FIELD_WIDTH = 50;
     private static final int FIELD_GAP = 6;
+    private static final int LABEL_WIDTH = 170;
+    private static final int HEX_FIELD_WIDTH = 90;
 
     private final Screen parent;
     private final TibiaChatConfig config = TibiaChatTabsClient.CONFIG;
 
-    public TibiaChatConfigScreen(Screen parent) {
-        super(Component.literal("Chat Tabs Settings"));
+    public ChatAppearanceConfigScreen(Screen parent) {
+        super(Component.literal("Tab Colors / Transparency"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
+        hexLabels.clear();
+
         int centerX = this.width / 2;
         int y = 40;
 
-        y = addSliderRow(centerX, y, "Tab bar size", TibiaChatConfig.MIN_BAR_SCALE, TibiaChatConfig.MAX_BAR_SCALE,
-                config.tabBarScale(), false, "%.2fx",
-                v -> config.setTabBarScale((float) v));
+        y = addSliderRow(centerX, y, "Tab bar transparency", TibiaChatConfig.MIN_ALPHA, TibiaChatConfig.MAX_ALPHA,
+                config.tabBarAlpha(), true, "%.0f",
+                v -> config.setTabBarAlpha((int) v));
 
-        y = addSliderRow(centerX, y, "Notification icon size", TibiaChatConfig.MIN_ICON_SCALE, TibiaChatConfig.MAX_ICON_SCALE,
-                config.notifIconScale(), false, "%.2fx",
-                v -> config.setNotifIconScale((float) v));
+        y = addSliderRow(centerX, y, "Tab transparency", TibiaChatConfig.MIN_ALPHA, TibiaChatConfig.MAX_ALPHA,
+                config.tabAlpha(), true, "%.0f",
+                v -> config.setTabAlpha((int) v));
 
-        y += 8;
+        y += 6;
 
-        this.addRenderableWidget(Button.builder(Component.literal("Reposition / Resize HUD"),
-                        btn -> {
-                            if (this.minecraft != null) {
-                                this.minecraft.setScreen(new HudEditScreen(this));
-                            }
-                        })
-                .bounds(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
-                .build());
-        y += ROW_HEIGHT;
+        y = addHexColorRow(centerX, y, "Tab bar color (hex RRGGBB)", config.tabBarColor(),
+                v -> config.setTabBarColor(v));
 
-        this.addRenderableWidget(Button.builder(Component.literal("Tab Colors / Transparency"),
-                        btn -> {
-                            if (this.minecraft != null) {
-                                this.minecraft.setScreen(new ChatAppearanceConfigScreen(this));
-                            }
-                        })
-                .bounds(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
-                .build());
-        y += ROW_HEIGHT;
+        y = addHexColorRow(centerX, y, "Tab color (hex RRGGBB)", config.tabColor(),
+                v -> config.setTabColor(v));
 
-        this.addRenderableWidget(Button.builder(Component.literal("Private Message Detection"),
-                        btn -> {
-                            if (this.minecraft != null) {
-                                this.minecraft.setScreen(new ChatRegexConfigScreen(this));
-                            }
-                        })
-                .bounds(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
-                .build());
-        y += ROW_HEIGHT + 12;
+        y += 12;
 
-        this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), btn -> {
-                    config.resetHudDefaults();
+        this.addRenderableWidget(Button.builder(Component.literal("Reset Colors to Defaults"), btn -> {
+                    config.resetAppearanceDefaults();
                     config.save();
                     this.rebuildWidgets();
                 })
@@ -84,7 +66,7 @@ public class TibiaChatConfigScreen extends Screen {
     }
 
     private int addSliderRow(int centerX, int y, String label, double min, double max, double initial,
-                              boolean wholeNumber, String format, DoubleConsumer apply) {
+                              boolean wholeNumber, String format, java.util.function.DoubleConsumer apply) {
         int sliderX = centerX - (SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH) / 2;
         int fieldX = sliderX + SLIDER_WIDTH + FIELD_GAP;
 
@@ -113,17 +95,49 @@ public class TibiaChatConfigScreen extends Screen {
         return y + ROW_HEIGHT;
     }
 
+    private int addHexColorRow(int centerX, int y, String label, int initialRgb, IntConsumer apply) {
+        int totalWidth = LABEL_WIDTH + FIELD_GAP + HEX_FIELD_WIDTH;
+        int labelX = centerX - totalWidth / 2;
+        int fieldX = labelX + LABEL_WIDTH + FIELD_GAP;
+
+        EditBox field = new EditBox(this.font, fieldX, y, HEX_FIELD_WIDTH, 20, Component.literal(label));
+        field.setMaxLength(7);
+        field.setValue(String.format(Locale.ROOT, "%06X", initialRgb));
+        field.setResponder(text -> {
+            String hex = text.trim();
+            if (hex.startsWith("#")) hex = hex.substring(1);
+            if (!hex.matches("[0-9a-fA-F]{6}")) return;
+            try {
+                int parsed = Integer.parseInt(hex, 16);
+                apply.accept(parsed);
+                config.save();
+            } catch (NumberFormatException ignored) {
+            }
+        });
+
+        this.hexLabels.add(new HexLabel(label, labelX, y));
+        this.addRenderableWidget(field);
+        return y + ROW_HEIGHT;
+    }
+
+    private final java.util.List<HexLabel> hexLabels = new java.util.ArrayList<>();
+
+    private record HexLabel(String text, int x, int y) {}
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         super.extractRenderState(context, mouseX, mouseY, delta);
         context.text(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
+        for (HexLabel h : hexLabels) {
+            context.text(this.font, h.text(), h.x(), h.y() + 6, 0xFFFFFFFF, true);
+        }
     }
 
     @Override
     public void onClose() {
         config.save();
         if (this.minecraft != null) {
-            this.minecraft.setScreen(parent);
+            this.minecraft.gui.setScreen(parent);
         }
     }
 }

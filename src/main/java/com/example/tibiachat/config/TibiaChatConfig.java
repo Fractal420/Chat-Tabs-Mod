@@ -17,6 +17,8 @@ public final class TibiaChatConfig {
     public static final int MAX_ICON_OFFSET = 2000;
     public static final int MIN_BAR_WIDTH = 50;
     public static final int MAX_BAR_WIDTH = 2000;
+    public static final int MIN_ALPHA = 0;
+    public static final int MAX_ALPHA = 255;
 
     private float tabBarScale = 1.0f;
     private float notifIconScale = 1.0f;
@@ -61,15 +63,64 @@ public final class TibiaChatConfig {
         return Math.max(min, Math.min(max, v));
     }
 
-    private String whisperCommand = "/w";
-    private List<String> whisperAliases = new ArrayList<>(List.of("w", "msg", "tell", "whisper"));
-    private List<String> incomingWhisperRegexes = new ArrayList<>(List.of(
-            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?([a-zA-Z0-0_]{3,16})\\s+whispers:\\s*(.*)$",
-            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?([a-zA-Z0-9_]{3,16})\\s+->\\s+you:\\s*(.*)$"
-    ));
+    // ---- Appearance: tab bar / tab colors & transparency ----
+
+    private static final int DEFAULT_TAB_BAR_COLOR = 0x101010;
+    private static final int DEFAULT_TAB_BAR_ALPHA = 176; // 0xB0
+    private static final int DEFAULT_TAB_COLOR = 0x202020;
+    private static final int DEFAULT_TAB_ALPHA = 255;
+
+    private int tabBarColor = DEFAULT_TAB_BAR_COLOR;
+    private int tabBarAlpha = DEFAULT_TAB_BAR_ALPHA;
+    private int tabColor = DEFAULT_TAB_COLOR;
+    private int tabAlpha = DEFAULT_TAB_ALPHA;
+
+    public int tabBarColor() { return tabBarColor & 0xFFFFFF; }
+    public void setTabBarColor(int rgb) { tabBarColor = rgb & 0xFFFFFF; }
+
+    public int tabBarAlpha() { return tabBarAlpha; }
+    public void setTabBarAlpha(int a) { tabBarAlpha = (int) clamp(a, MIN_ALPHA, MAX_ALPHA); }
+
+    public int tabColor() { return tabColor & 0xFFFFFF; }
+    public void setTabColor(int rgb) { tabColor = rgb & 0xFFFFFF; }
+
+    public int tabAlpha() { return tabAlpha; }
+    public void setTabAlpha(int a) { tabAlpha = (int) clamp(a, MIN_ALPHA, MAX_ALPHA); }
+
+    public void resetAppearanceDefaults() {
+        tabBarColor = DEFAULT_TAB_BAR_COLOR;
+        tabBarAlpha = DEFAULT_TAB_BAR_ALPHA;
+        tabColor = DEFAULT_TAB_COLOR;
+        tabAlpha = DEFAULT_TAB_ALPHA;
+    }
+
+    // ---- Whisper command / whisper detection regexes (editable in-game) ----
+
+    private static final String DEFAULT_WHISPER_COMMAND = "/w";
+    private static final List<String> DEFAULT_WHISPER_ALIASES =
+            List.of("w", "msg", "tell", "whisper");
+
+    // Leading-icon tolerant fragment: servers that prefix chat names with a head/rank
+    // icon (a short run of non-alphanumeric glyphs) before the player name.
+    private static final String ICON_PREFIX = "(?:[^a-zA-Z0-9_\\s]{1,4}\\s+)?";
+
+    private static final List<String> DEFAULT_INCOMING_WHISPER_REGEXES = List.of(
+            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "([a-zA-Z0-9_]{3,16})\\s+whispers:\\s*(.*)$",
+            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "([a-zA-Z0-9_]{3,16})\\s+->\\s+you:\\s*(.*)$"
+    );
+
+    private String whisperCommand = DEFAULT_WHISPER_COMMAND;
+    private List<String> whisperAliases = new ArrayList<>(DEFAULT_WHISPER_ALIASES);
+    private List<String> incomingWhisperRegexes = new ArrayList<>(DEFAULT_INCOMING_WHISPER_REGEXES);
 
     public String whisperCommand() { return whisperCommand; }
     public List<String> incomingWhisperRegexes() { return Collections.unmodifiableList(incomingWhisperRegexes); }
+    public List<String> whisperAliases() { return Collections.unmodifiableList(whisperAliases); }
+
+    public static String defaultWhisperCommand() { return DEFAULT_WHISPER_COMMAND; }
+    public static List<String> defaultWhisperAliases() { return DEFAULT_WHISPER_ALIASES; }
+    public static List<String> defaultIncomingWhisperRegexes() { return DEFAULT_INCOMING_WHISPER_REGEXES; }
+    public static String iconPrefixFragment() { return ICON_PREFIX; }
 
     public boolean isWhisperCommand(String base) {
         String configured = whisperCommand.startsWith("/") ? whisperCommand.substring(1) : whisperCommand;
@@ -78,6 +129,35 @@ public final class TibiaChatConfig {
 
     public void setWhisperCommand(String value) {
         if (value != null && !value.isBlank()) whisperCommand = value.startsWith("/") ? value : "/" + value;
+    }
+
+    public void setWhisperAliases(List<String> aliases) {
+        List<String> cleaned = new ArrayList<>();
+        if (aliases != null) {
+            for (String a : aliases) {
+                if (a == null) continue;
+                String t = a.trim();
+                if (t.startsWith("/")) t = t.substring(1);
+                if (!t.isBlank()) cleaned.add(t);
+            }
+        }
+        whisperAliases = cleaned;
+    }
+
+    public void setIncomingWhisperRegexes(List<String> regexes) {
+        List<String> cleaned = new ArrayList<>();
+        if (regexes != null) {
+            for (String r : regexes) {
+                if (r != null && !r.isBlank()) cleaned.add(r);
+            }
+        }
+        incomingWhisperRegexes = cleaned;
+    }
+
+    public void resetWhisperDetectionDefaults() {
+        whisperCommand = DEFAULT_WHISPER_COMMAND;
+        whisperAliases = new ArrayList<>(DEFAULT_WHISPER_ALIASES);
+        incomingWhisperRegexes = new ArrayList<>(DEFAULT_INCOMING_WHISPER_REGEXES);
     }
 
     public static TibiaChatConfig load() {

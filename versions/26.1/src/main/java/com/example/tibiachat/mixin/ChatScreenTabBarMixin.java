@@ -73,7 +73,9 @@ public abstract class ChatScreenTabBarMixin {
 
         tibiaChatTabs$tickDrag(mc, mouseX, mouseY, left, right, top, bottom);
 
-        ctx.fill(left, top, right, bottom, 0xB0101010);
+        int barAlpha = TibiaChatTabsClient.CONFIG.tabBarAlpha();
+        int barRgb = TibiaChatTabsClient.CONFIG.tabBarColor();
+        ctx.fill(left, top, right, bottom, (barAlpha << 24) | barRgb);
 
         int mainW = tibiaChatTabs$tabMainWidth();
         int x = left + 2;
@@ -207,12 +209,18 @@ public abstract class ChatScreenTabBarMixin {
         boolean selected = TibiaChatTabsClient.CHAT.selectedKey().equals(key);
         boolean hover = mouseX >= x && mouseX < x + w && mouseY >= top && mouseY < bottom;
 
+        int tabAlpha = TibiaChatTabsClient.CONFIG.tabAlpha();
+        int tabRgb = TibiaChatTabsClient.CONFIG.tabColor();
+        int shadedRgb = selected
+                ? tibiaChatTabs$lighten(tabRgb, 0.18f)
+                : (hover ? tibiaChatTabs$lighten(tabRgb, 0.09f) : tabRgb);
+
         ctx.fill(
                 x,
                 top,
                 x + w - 1,
                 bottom,
-                selected ? 0xFF3A3A3A : (hover ? 0xFF303030 : 0xFF202020)
+                (tabAlpha << 24) | shadedRgb
         );
 
         String shown = label;
@@ -258,6 +266,16 @@ public abstract class ChatScreenTabBarMixin {
         }
 
         return x + w;
+    }
+
+    private static int tibiaChatTabs$lighten(int rgb, float amount) {
+        int r = (rgb >> 16) & 0xFF;
+        int g = (rgb >> 8) & 0xFF;
+        int b = rgb & 0xFF;
+        r = Math.min(255, Math.round(r + (255 - r) * amount));
+        g = Math.min(255, Math.round(g + (255 - g) * amount));
+        b = Math.min(255, Math.round(b + (255 - b) * amount));
+        return (r << 16) | (g << 8) | b;
     }
 
     private boolean tibiaChatTabs$isCloseHovered(
@@ -642,6 +660,17 @@ public abstract class ChatScreenTabBarMixin {
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
+            return;
+        }
+
+        if (text.startsWith("/")) {
+            // The player typed a slash command while a private-message tab was open.
+            // Send it as a normal command instead of wrapping it in a whisper
+            // (which previously produced broken input like "/w playerx /tpa name").
+            String command = text.substring(1);
+            mc.player.connection.sendCommand(command);
+            this.input.setValue("");
+            cir.setReturnValue(true);
             return;
         }
 

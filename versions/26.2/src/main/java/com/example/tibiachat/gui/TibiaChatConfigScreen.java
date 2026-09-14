@@ -48,6 +48,26 @@ public class TibiaChatConfigScreen extends Screen {
                         })
                 .bounds(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
                 .build());
+        y += ROW_HEIGHT;
+
+        this.addRenderableWidget(Button.builder(Component.literal("Tab Colors / Transparency"),
+                        btn -> {
+                            if (this.minecraft != null) {
+                                this.minecraft.gui.setScreen(new ChatAppearanceConfigScreen(this));
+                            }
+                        })
+                .bounds(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
+                .build());
+        y += ROW_HEIGHT;
+
+        this.addRenderableWidget(Button.builder(Component.literal("Private Message Detection"),
+                        btn -> {
+                            if (this.minecraft != null) {
+                                this.minecraft.gui.setScreen(new ChatRegexConfigScreen(this));
+                            }
+                        })
+                .bounds(centerX - SLIDER_WIDTH / 2 - FIELD_GAP - FIELD_WIDTH / 2, y, SLIDER_WIDTH + FIELD_GAP + FIELD_WIDTH, 20)
+                .build());
         y += ROW_HEIGHT + 12;
 
         this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), btn -> {
