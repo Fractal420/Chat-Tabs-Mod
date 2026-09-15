@@ -46,7 +46,7 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 ## Requirements
 
 - [Fabric API](https://modrinth.com/mod/fabric-api)
-- [Mod Menu](https://modrinth.com/mod/modmenu) (optional, for the config entry in the mods list)
+- [Mod Menu](https://modrinth.com/mod/modmenu)
 
 ## Downloads
 
