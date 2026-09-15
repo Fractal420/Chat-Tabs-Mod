@@ -1,6 +1,7 @@
 package com.example.tibiachat;
 
 import com.example.tibiachat.chat.ChatManager;
+import com.example.tibiachat.chat.SentMessageHistory;
 import com.example.tibiachat.config.TibiaChatConfig;
 import com.example.tibiachat.gui.TibiaChatConfigScreen;
 import com.example.tibiachat.hud.HudLayout;
@@ -62,7 +63,13 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
 
         ClientSendMessageEvents.COMMAND.register(CHAT::onOutgoingCommand);
 
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> CONFIG.save());
+        SentMessageHistory.load();
+
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> SentMessageHistory.applyToChat());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            CONFIG.save();
+            SentMessageHistory.save();
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             CHAT.tick();

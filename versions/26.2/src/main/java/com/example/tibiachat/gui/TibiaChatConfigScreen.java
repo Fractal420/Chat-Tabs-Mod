@@ -1,6 +1,7 @@
 package com.example.tibiachat.gui;
 
 import com.example.tibiachat.TibiaChatTabsClient;
+import com.example.tibiachat.chat.SentMessageHistory;
 import com.example.tibiachat.config.TibiaChatConfig;
 import java.util.Locale;
 import java.util.function.DoubleConsumer;
@@ -62,11 +63,33 @@ public class TibiaChatConfigScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal("Message Detection"),
                 btn -> { if (this.minecraft != null) this.minecraft.gui.setScreen(new ChatRegexConfigScreen(this)); })
                 .bounds(cx - 110, y, 220, 18).build());
-        y += ROW + 8;
+        y += ROW + 4;
+
+        this.addRenderableWidget(Button.builder(
+                Component.literal("Persist sent messages: " + (config.persistSentMessages() ? "ON" : "OFF")),
+                btn -> {
+                    config.setPersistSentMessages(!config.persistSentMessages());
+                    config.save();
+                    if (config.persistSentMessages()) {
+                        SentMessageHistory.applyToChat();
+                    }
+                    this.rebuildWidgets();
+                }).bounds(cx - 110, y, 220, 18).build());
+        y += ROW + 2;
+
+        y = addSlider(cx - 110, y, "Sent history size",
+                TibiaChatConfig.MIN_SENT_HISTORY, TibiaChatConfig.MAX_SENT_HISTORY,
+                config.sentMessageHistoryLimit(), true, "%.0f",
+                v -> {
+                    config.setSentMessageHistoryLimit((int) v);
+                    SentMessageHistory.onLimitChanged();
+                });
+        y += 6;
 
         this.addRenderableWidget(Button.builder(Component.literal("Reset Defaults"), btn -> {
             config.resetAllDefaults();
             config.save();
+            SentMessageHistory.onLimitChanged();
             this.rebuildWidgets();
         }).bounds(cx - 100, y, 200, 18).build());
 

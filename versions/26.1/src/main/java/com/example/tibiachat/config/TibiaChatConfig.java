@@ -270,10 +270,30 @@ public final class TibiaChatConfig {
         whisperFormats = cleaned;
     }
 
+
+    public static final int MIN_SENT_HISTORY = 1;
+    public static final int MAX_SENT_HISTORY = 100;
+    public static final int DEFAULT_SENT_HISTORY = 50;
+
+    private boolean persistSentMessages = true;
+    private int sentMessageHistoryLimit = DEFAULT_SENT_HISTORY;
+
+    public boolean persistSentMessages() { return persistSentMessages; }
+    public void setPersistSentMessages(boolean v) { persistSentMessages = v; }
+
+    public int sentMessageHistoryLimit() { return (int) clamp(sentMessageHistoryLimit, MIN_SENT_HISTORY, MAX_SENT_HISTORY); }
+    public void setSentMessageHistoryLimit(int v) { sentMessageHistoryLimit = (int) clamp(v, MIN_SENT_HISTORY, MAX_SENT_HISTORY); }
+
+    public void resetSentHistoryDefaults() {
+        persistSentMessages = true;
+        sentMessageHistoryLimit = DEFAULT_SENT_HISTORY;
+    }
+
     public void resetAllDefaults() {
         resetHudDefaults();
         resetAppearanceDefaults();
         resetWhisperDetectionDefaults();
+        resetSentHistoryDefaults();
     }
 
     public void resetWhisperDetectionDefaults() {
