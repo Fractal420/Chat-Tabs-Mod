@@ -4,14 +4,13 @@ A client-side Fabric mod for Minecraft that adds **Tibia-style chat tabs** to th
 
 Built with **6b6t** (an anarchy server) in mind, where whisper spam can bury conversations, but the whisper detection is regex-based and fully configurable, so it can be adapted to other servers' chat formats.
 
-<img width="2448" height="1080" alt="1002465912" src="https://github.com/user-attachments/assets/ce19a11c-d8a0-4e87-add3-283767fc7b6e" />
-<img width="2448" height="1080" alt="1002465911" src="https://github.com/user-attachments/assets/f57e2564-4216-492c-8b67-c408e89559a9" />
-<img width="2448" height="1080" alt="1002465910" src="https://github.com/user-attachments/assets/2dd60fca-6054-4752-837d-ed5dc27acc09" />
-<img width="2448" height="1080" alt="1002465899" src="https://github.com/user-attachments/assets/34c914c4-cae8-4275-a669-42efbb5d9b68" />
-
 
 https://github.com/user-attachments/assets/cd6b56dd-60c8-44ec-9002-a004ff0477c6
 
+<img width="2448" height="1080" alt="1002465899" src="https://github.com/user-attachments/assets/34c914c4-cae8-4275-a669-42efbb5d9b68" />
+<img width="2448" height="1080" alt="1002465910" src="https://github.com/user-attachments/assets/2dd60fca-6054-4752-837d-ed5dc27acc09" />
+<img width="2448" height="1080" alt="1002465911" src="https://github.com/user-attachments/assets/f57e2564-4216-492c-8b67-c408e89559a9" />
+<img width="2448" height="1080" alt="1002465912" src="https://github.com/user-attachments/assets/ce19a11c-d8a0-4e87-add3-283767fc7b6e" />
 
 
 ## Why
