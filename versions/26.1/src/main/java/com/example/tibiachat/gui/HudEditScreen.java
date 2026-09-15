@@ -31,19 +31,45 @@ public class HudEditScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, this.width, this.height, 0x80000000);
+        context.fill(0, 0, this.width, this.height, 0x40000000);
+
+        int chatBottom = this.height - 40;
+        int chatLeft = 4;
+        String[] samples = {
+            "§7[System] Welcome to the server!",
+            "§fPlayer123 §7» Hello everyone",
+            "§dYou whisper to Friend: hey there",
+            "§dFriend whispers: hi!",
+            "§e[!] A new message arrived"
+        };
+        int lineH = 10;
+        int startY = chatBottom - samples.length * lineH - 4;
+        context.fill(chatLeft - 2, startY - 2, chatLeft + 220, chatBottom, 0x90000000);
+        for (int i = 0; i < samples.length; i++) {
+            context.text(this.font, Component.literal(samples[i]), chatLeft, startY + i * lineH, 0xFFFFFFFF, true);
+        }
+        context.text(this.font, Component.literal("§8(sample chat)"), chatLeft, chatBottom - 2, 0xFF888888, false);
 
         int barLeft = HudLayout.tabBarLeft();
         int barRight = HudLayout.tabBarRight(this.width);
         int barTop = HudLayout.tabBarTop(this.height);
         int barBottom = HudLayout.tabBarBottom(this.height);
 
-        context.fill(barLeft, barTop, barRight, barBottom, 0xB03A6EA5);
+        int barAlpha = config.tabBarAlpha();
+        int barRgb = config.tabBarColor();
+        context.fill(barLeft, barTop, barRight, barBottom, (barAlpha << 24) | barRgb);
+
         context.fill(barRight - 6, barTop, barRight, barBottom, 0xFF4A90E2);
 
-        context.text(this.font,
-                Component.literal("TAB BAR"),
-                barLeft + (barRight - barLeft) / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+        int tabAlpha = config.tabAlpha();
+        int tabRgb = config.tabColor();
+        int mainW = Math.round(50 * HudLayout.tabTextScale());
+        context.fill(barLeft + 2, barTop + 2, barLeft + 2 + mainW, barBottom - 2, (tabAlpha << 24) | tabRgb);
+        context.text(this.font, "Main", barLeft + 2 + mainW / 2 - this.font.width("Main") / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+
+        int tabW = Math.round(70 * HudLayout.tabTextScale());
+        context.fill(barLeft + 4 + mainW, barTop + 2, barLeft + 4 + mainW + tabW, barBottom - 2, (tabAlpha << 24) | tabRgb);
+        context.text(this.font, "Sample", barLeft + 4 + mainW + tabW / 2 - this.font.width("Sample") / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
 
         String sample = "\u2709 3";
         int textW = this.font.width(sample);
@@ -55,9 +81,8 @@ public class HudEditScreen extends Screen {
         context.fill(iconX - 3, iconY - 2, iconX + iconW, iconY + iconH, 0xB0C77A2A);
         context.text(this.font, Component.literal(sample), iconX, iconY, 0xFFFFD24A, true);
 
-        context.text(this.font,
-                Component.literal("Drag elements to move anywhere. Drag tab bar right edge to resize length."),
-                this.width / 2, 12, 0xFFFFFFFF);
+        context.text(this.font, "Drag elements to move. Drag blue edge to resize. Sample chat shown for reference.",
+                this.width / 2 - this.font.width("Drag elements to move. Drag blue edge to resize. Sample chat shown for reference.") / 2, 8, 0xFFFFFFFF);
 
         super.extractRenderState(context, mouseX, mouseY, delta);
     }

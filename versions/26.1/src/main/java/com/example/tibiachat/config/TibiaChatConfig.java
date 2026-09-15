@@ -63,8 +63,6 @@ public final class TibiaChatConfig {
         return Math.max(min, Math.min(max, v));
     }
 
-    // ---- Appearance: tab bar / tab colors & transparency ----
-
     private static final int DEFAULT_TAB_BAR_COLOR = 0x101010;
     private static final int DEFAULT_TAB_BAR_ALPHA = 176; // 0xB0
     private static final int DEFAULT_TAB_COLOR = 0x202020;
@@ -94,19 +92,15 @@ public final class TibiaChatConfig {
         tabAlpha = DEFAULT_TAB_ALPHA;
     }
 
-    // ---- Whisper command / whisper detection regexes (editable in-game) ----
-
     private static final String DEFAULT_WHISPER_COMMAND = "/w";
     private static final List<String> DEFAULT_WHISPER_ALIASES =
             List.of("w", "msg", "tell", "whisper");
-
-    // Leading-icon tolerant fragment: servers that prefix chat names with a head/rank
-    // icon (a short run of non-alphanumeric glyphs) before the player name.
-    private static final String ICON_PREFIX = "(?:[^a-zA-Z0-9_\\s]{1,4}\\s+)?";
+    private static final String ICON_PREFIX = "(?:[^\\w\\s]{1,8}\\s*)?";
 
     private static final List<String> DEFAULT_INCOMING_WHISPER_REGEXES = List.of(
-            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "([a-zA-Z0-9_]{3,16})\\s+whispers:\\s*(.*)$",
-            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "([a-zA-Z0-9_]{3,16})\\s+->\\s+you:\\s*(.*)$"
+            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s+whispers?(?: to you)?\\s*:?\\s*(.*)$",
+            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s+->\\s+(?:you|You)\\s*:?\\s*(.*)$",
+            "^(?:\\[\\d{2}:\\d{2}\\]\\s*)?" + ICON_PREFIX + "\\[(?:PM|MSG|WHISPER)\\]\\s*" + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s*:\\s*(.*)$"
     );
 
     private String whisperCommand = DEFAULT_WHISPER_COMMAND;
