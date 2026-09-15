@@ -8,6 +8,7 @@ public final class HudLayout {
     public static final int BASE_TAB_BOTTOM_OFFSET = 30;
     public static final int BASE_ICON_X = 6;
     public static final int BASE_ICON_Y_FROM_BOTTOM = 66;
+    public static final int SETTINGS_BTN_W = 16;
 
     private HudLayout() {}
 
@@ -57,5 +58,21 @@ public final class HudLayout {
 
     public static int notifIconHeight() {
         return Math.round(12 * notifIconScale());
+    }
+
+    public static int settingsBtnX(int screenWidth) {
+        return tabBarRight(screenWidth) - SETTINGS_BTN_W + TibiaChatTabsClient.CONFIG.settingsBtnOffsetX();
+    }
+
+    public static int settingsBtnY(int screenHeight) {
+        return tabBarTop(screenHeight) + TibiaChatTabsClient.CONFIG.settingsBtnOffsetY();
+    }
+
+    public static int settingsBtnW() {
+        return SETTINGS_BTN_W;
+    }
+
+    public static int settingsBtnH() {
+        return tabBarHeight();
     }
 }

@@ -11,11 +11,16 @@ import net.minecraft.network.chat.Component;
 
 public class HudEditScreen extends Screen {
 
-    private enum Target { NONE, TAB_BAR, TAB_BAR_RESIZE, ICON }
+    private enum Target { NONE, TAB_BAR, TAB_BAR_RESIZE, ICON, SETTINGS_BTN }
 
     private final Screen parent;
     private final TibiaChatConfig config = TibiaChatTabsClient.CONFIG;
     private Target dragging = Target.NONE;
+    private double dragStartMouseX;
+    private double dragStartMouseY;
+    private int dragStartOffsetX;
+    private int dragStartOffsetY;
+    private int dragStartWidth;
 
     public HudEditScreen(Screen parent) {
         super(Component.literal("Reposition Chat Tabs HUD"));
@@ -31,24 +36,7 @@ public class HudEditScreen extends Screen {
 
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        context.fill(0, 0, this.width, this.height, 0x40000000);
-
-        int chatBottom = this.height - 40;
-        int chatLeft = 4;
-        String[] samples = {
-            "§7[System] Welcome to the server!",
-            "§fPlayer123 §7» Hello everyone",
-            "§dYou whisper to Friend: hey there",
-            "§dFriend whispers: hi!",
-            "§e[!] A new message arrived"
-        };
-        int lineH = 10;
-        int startY = chatBottom - samples.length * lineH - 4;
-        context.fill(chatLeft - 2, startY - 2, chatLeft + 220, chatBottom, 0x90000000);
-        for (int i = 0; i < samples.length; i++) {
-            context.drawString(this.font, Component.literal(samples[i]), chatLeft, startY + i * lineH, 0xFFFFFFFF, true);
-        }
-        context.drawString(this.font, Component.literal("§8(sample chat)"), chatLeft, chatBottom - 2, 0xFF888888, false);
+        context.fill(0, 0, this.width, this.height, 0x60000000);
 
         int barLeft = HudLayout.tabBarLeft();
         int barRight = HudLayout.tabBarRight(this.width);
@@ -58,7 +46,6 @@ public class HudEditScreen extends Screen {
         int barAlpha = config.tabBarAlpha();
         int barRgb = config.tabBarColor();
         context.fill(barLeft, barTop, barRight, barBottom, (barAlpha << 24) | barRgb);
-
         context.fill(barRight - 6, barTop, barRight, barBottom, 0xFF4A90E2);
 
         int tabAlpha = config.tabAlpha();
@@ -75,15 +62,26 @@ public class HudEditScreen extends Screen {
         int textW = this.font.width(sample);
         int iconX = HudLayout.notifIconX();
         int iconY = HudLayout.notifIconY(this.height);
-        int iconW = HudLayout.notifIconWidth(textW);
-        int iconH = HudLayout.notifIconHeight();
-
+        float iconScale = HudLayout.notifIconScale();
+        int iconW = Math.max(Math.round((textW + 6) * iconScale), 20);
+        int iconH = Math.max(Math.round(12 * iconScale), 14);
         context.fill(iconX - 3, iconY - 2, iconX + iconW, iconY + iconH, 0xB0C77A2A);
-        context.drawString(this.font, Component.literal(sample), iconX, iconY, 0xFFFFD24A, true);
+        context.pose().pushMatrix();
+        context.pose().translate(iconX, iconY);
+        context.pose().scale(iconScale, iconScale);
+        context.drawString(this.font, Component.literal(sample), 0, 0, 0xFFFFD24A, true);
+        context.pose().popMatrix();
+
+        int sbX = HudLayout.settingsBtnX(this.width);
+        int sbY = HudLayout.settingsBtnY(this.height);
+        int sbW = HudLayout.settingsBtnW();
+        int sbH = HudLayout.settingsBtnH();
+        context.fill(sbX, sbY, sbX + sbW, sbY + sbH, 0xFF3A6EA5);
+        context.drawString(this.font, Component.literal("\u2699"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
 
         context.drawCenteredString(this.font,
-                Component.literal("Drag elements to move. Drag blue edge to resize. Sample chat shown for reference."),
-                this.width / 2, 8, 0xFFFFFFFF);
+                Component.literal("Drag tab bar / notif icon / settings button. Blue edge resizes tab bar."),
+                this.width / 2, 12, 0xFFFFFFFF);
 
         super.render(context, mouseX, mouseY, delta);
     }
@@ -108,23 +106,60 @@ public class HudEditScreen extends Screen {
         int textW = this.font.width(sample);
         int iconX = HudLayout.notifIconX();
         int iconY = HudLayout.notifIconY(this.height);
-        int iconW = HudLayout.notifIconWidth(textW);
-        int iconH = HudLayout.notifIconHeight();
-        return x >= iconX - 3 && x < iconX + iconW && y >= iconY - 2 && y < iconY + iconH;
+        float iconScale = HudLayout.notifIconScale();
+        int iconW = Math.max(Math.round((textW + 6) * iconScale), 20);
+        int iconH = Math.max(Math.round(12 * iconScale), 14);
+        return x >= iconX - 6 && x < iconX + iconW + 6 && y >= iconY - 6 && y < iconY + iconH + 6;
+    }
+
+    private boolean withinSettingsBtn(double x, double y) {
+        int sbX = HudLayout.settingsBtnX(this.width);
+        int sbY = HudLayout.settingsBtnY(this.height);
+        int sbW = HudLayout.settingsBtnW();
+        int sbH = HudLayout.settingsBtnH();
+        return x >= sbX && x < sbX + sbW && y >= sbY && y < sbY + sbH;
+    }
+
+    private void beginDrag(Target target, double mouseX, double mouseY) {
+        dragging = target;
+        dragStartMouseX = mouseX;
+        dragStartMouseY = mouseY;
+        switch (target) {
+            case TAB_BAR -> {
+                dragStartOffsetX = config.tabBarOffsetX();
+                dragStartOffsetY = config.tabBarOffsetY();
+            }
+            case TAB_BAR_RESIZE -> dragStartWidth = config.tabBarWidth();
+            case ICON -> {
+                dragStartOffsetX = config.notifIconOffsetX();
+                dragStartOffsetY = config.notifIconOffsetY();
+            }
+            case SETTINGS_BTN -> {
+                dragStartOffsetX = config.settingsBtnOffsetX();
+                dragStartOffsetY = config.settingsBtnOffsetY();
+            }
+            default -> {}
+        }
     }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
-        if (withinIcon(click.x(), click.y())) {
-            dragging = Target.ICON;
+        double x = click.x();
+        double y = click.y();
+        if (withinIcon(x, y)) {
+            beginDrag(Target.ICON, x, y);
             return true;
         }
-        if (withinResizeHandle(click.x(), click.y())) {
-            dragging = Target.TAB_BAR_RESIZE;
+        if (withinSettingsBtn(x, y)) {
+            beginDrag(Target.SETTINGS_BTN, x, y);
             return true;
         }
-        if (withinTabBar(click.x(), click.y())) {
-            dragging = Target.TAB_BAR;
+        if (withinResizeHandle(x, y)) {
+            beginDrag(Target.TAB_BAR_RESIZE, x, y);
+            return true;
+        }
+        if (withinTabBar(x, y)) {
+            beginDrag(Target.TAB_BAR, x, y);
             return true;
         }
         dragging = Target.NONE;
@@ -133,32 +168,35 @@ public class HudEditScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent click, double offsetX, double offsetY) {
+        if (dragging == Target.NONE) {
+            return super.mouseDragged(click, offsetX, offsetY);
+        }
+        double dx = click.x() - dragStartMouseX;
+        double dy = click.y() - dragStartMouseY;
         switch (dragging) {
             case TAB_BAR -> {
-                config.setTabBarOffsetX(Math.round(config.tabBarOffsetX() + (float) offsetX));
-                config.setTabBarOffsetY(Math.round(config.tabBarOffsetY() + (float) offsetY));
-                return true;
+                config.setTabBarOffsetX((int) Math.round(dragStartOffsetX + dx));
+                config.setTabBarOffsetY((int) Math.round(dragStartOffsetY + dy));
             }
-            case TAB_BAR_RESIZE -> {
-                config.setTabBarWidth(Math.max(50, Math.round(config.tabBarWidth() + (float) offsetX)));
-                return true;
-            }
+            case TAB_BAR_RESIZE -> config.setTabBarWidth(Math.max(50, (int) Math.round(dragStartWidth + dx)));
             case ICON -> {
-                config.setNotifIconOffsetX(Math.round(config.notifIconOffsetX() + (float) offsetX));
-                config.setNotifIconOffsetY(Math.round(config.notifIconOffsetY() + (float) offsetY));
-                return true;
+                config.setNotifIconOffsetX((int) Math.round(dragStartOffsetX + dx));
+                config.setNotifIconOffsetY((int) Math.round(dragStartOffsetY + dy));
             }
-            default -> {
-                return super.mouseDragged(click, offsetX, offsetY);
+            case SETTINGS_BTN -> {
+                config.setSettingsBtnOffsetX((int) Math.round(dragStartOffsetX + dx));
+                config.setSettingsBtnOffsetY((int) Math.round(dragStartOffsetY + dy));
             }
+            default -> {}
         }
+        return true;
     }
 
     @Override
     public boolean mouseReleased(MouseButtonEvent click) {
-        boolean wasDragging = dragging != Target.NONE;
+        boolean was = dragging != Target.NONE;
         dragging = Target.NONE;
-        if (wasDragging) {
+        if (was) {
             config.save();
             return true;
         }

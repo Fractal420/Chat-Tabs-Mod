@@ -42,7 +42,10 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
 
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {
             String key = CHAT.classifyAndStore(message, sender, timestamp);
-            return key != null && key.equals(CHAT.selectedKey());
+            if (key == null) return false;
+            String selected = CHAT.selectedKey();
+            if (com.example.tibiachat.chat.ConversationManager.MAIN.equals(selected)) return true;
+            return key.equals(selected);
         });
 
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
@@ -51,7 +54,10 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
             }
 
             String key = CHAT.classifyAndStore(message, null, java.time.Instant.now());
-            return key != null && key.equals(CHAT.selectedKey());
+            if (key == null) return false;
+            String selected = CHAT.selectedKey();
+            if (com.example.tibiachat.chat.ConversationManager.MAIN.equals(selected)) return true;
+            return key.equals(selected);
         });
 
         ClientSendMessageEvents.COMMAND.register(CHAT::onOutgoingCommand);

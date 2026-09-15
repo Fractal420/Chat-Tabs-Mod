@@ -4,6 +4,7 @@ import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.chat.Conversation;
 import com.example.tibiachat.chat.ConversationManager;
 import com.example.tibiachat.hud.HudLayout;
+import com.example.tibiachat.gui.TibiaChatConfigScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
@@ -95,7 +96,7 @@ public abstract class ChatScreenTabBarMixin {
         );
 
         int tabsLeft = x;
-        int tabsRight = right - 4;
+        int tabsRight = right - HudLayout.settingsBtnW() - 4;
 
         tibiaChatTabs$clampTabScroll(mc, tabsLeft, tabsRight);
 
@@ -167,6 +168,14 @@ public abstract class ChatScreenTabBarMixin {
             ctx.fill(tabsRight - 8, top, tabsRight, bottom, 0xCC101010);
             ctx.text(mc.font, Component.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF, true);
         }
+
+        int sbX = HudLayout.settingsBtnX(screenW);
+        int sbY = HudLayout.settingsBtnY(screenH);
+        int sbW = HudLayout.settingsBtnW();
+        int sbH = HudLayout.settingsBtnH();
+        boolean sbHover = mouseX >= sbX && mouseX < sbX + sbW && mouseY >= sbY && mouseY < sbY + sbH;
+        ctx.fill(sbX, sbY, sbX + sbW, sbY + sbH, sbHover ? 0xFF3A6EA5 : 0xCC202020);
+        ctx.text(mc.font, Component.literal("⚙"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
     }
 
     private int tibiaChatTabs$totalTabsWidth(Minecraft mc) {
@@ -324,7 +333,7 @@ public abstract class ChatScreenTabBarMixin {
         }
 
         int tabsLeft = left + 2 + tibiaChatTabs$tabMainWidth();
-        int tabsRight = right - 4;
+        int tabsRight = right - HudLayout.settingsBtnW() - 4;
 
         int maxScroll = tibiaChatTabs$maxTabScroll(mc, tabsLeft, tabsRight);
         if (maxScroll <= 0) {
@@ -367,6 +376,16 @@ public abstract class ChatScreenTabBarMixin {
         int top = HudLayout.tabBarTop(screenH);
         int bottom = HudLayout.tabBarBottom(screenH);
 
+        int sbX = HudLayout.settingsBtnX(screenW);
+        int sbY = HudLayout.settingsBtnY(screenH);
+        int sbW = HudLayout.settingsBtnW();
+        int sbH = HudLayout.settingsBtnH();
+        if (click.x() >= sbX && click.x() < sbX + sbW && click.y() >= sbY && click.y() < sbY + sbH) {
+            mc.gui.setScreen(new TibiaChatConfigScreen((ChatScreen) (Object) this));
+            cir.setReturnValue(true);
+            return;
+        }
+
         if (click.x() < left || click.x() >= right || click.y() < top || click.y() >= bottom) {
             return;
         }
@@ -383,7 +402,7 @@ public abstract class ChatScreenTabBarMixin {
         }
 
         int tabsLeft = x + mainW;
-        int tabsRight = right - 4;
+        int tabsRight = right - HudLayout.settingsBtnW() - 4;
 
         if (click.x() < tabsLeft || click.x() > tabsRight) {
             return;
@@ -480,7 +499,7 @@ public abstract class ChatScreenTabBarMixin {
         }
 
         int tabsLeft = left + 2 + tibiaChatTabs$tabMainWidth();
-        int tabsRight = right - 4;
+        int tabsRight = right - HudLayout.settingsBtnW() - 4;
 
         double pointerX = Math.max(tabsLeft, Math.min(tabsRight, (double) mouseX));
 
@@ -566,7 +585,7 @@ public abstract class ChatScreenTabBarMixin {
         int right = HudLayout.tabBarRight(screenW);
 
         int tabsLeft = left + 2 + tibiaChatTabs$tabMainWidth();
-        int tabsRight = right - 4;
+        int tabsRight = right - HudLayout.settingsBtnW() - 4;
 
         tibiaChatTabs$clampTabScroll(mc, tabsLeft, tabsRight);
     }
@@ -596,7 +615,7 @@ public abstract class ChatScreenTabBarMixin {
         int right = HudLayout.tabBarRight(screenW);
 
         int tabsLeft = left + 2 + tibiaChatTabs$tabMainWidth();
-        int tabsRight = right - 4;
+        int tabsRight = right - HudLayout.settingsBtnW() - 4;
 
         String selectedKey = TibiaChatTabsClient.CHAT.selectedKey();
 
