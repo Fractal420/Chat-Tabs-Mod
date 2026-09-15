@@ -40,7 +40,10 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 ### Configuration
 - **In-game settings GUI** — open via the ⚙ button on the tab bar, Mod Menu, or a configurable keybind ("Open Chat Tabs Settings").
 - **In-game PM detection editor** — change the whisper command, aliases, and whisper formats and detection options from the settings screens.
-- **Persistent sent messages** — optional toggle to keep the chat input history (Up/Down arrow recall) across disconnects, relogs, and full game restarts. Includes a slider for how many recent lines to remember (1–500). History is stored in `config/tibia_chat_tabs_sent_history.json`.
+- **Persistent sent messages** — optional toggle to keep the chat input history (Up/Down arrow recall) across disconnects, relogs, and full game restarts. Includes a slider for how many recent lines to remember (1–1000). History is stored in `config/tibia_chat_tabs_sent_history.json`.
+- **Persistent chat log** — optional toggle to restore the Main tab chat history after a restart or relog, with a slider for how many messages to keep (10–100000, default 1000). Full component JSON is stored so player heads and formatting are restored. Detection uses normalized component text (head placeholders stripped) so whisper matching is more stable across server format changes.
+- **Persistent tabs** — optional toggle to keep private conversation tabs and their messages across restarts and relogs. Tab history uses the same size limit as the chat log.
+- Chat and tab history are stored in `config/tibia_chat_tabs_history.json`.
 - **Config file** — everything is stored in `config/tibia_chat_tabs.json` and is created automatically on first run.
 
 ## Requirements

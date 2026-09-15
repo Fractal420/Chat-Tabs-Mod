@@ -1,6 +1,7 @@
 package com.example.tibiachat;
 
 import com.example.tibiachat.chat.ChatManager;
+import com.example.tibiachat.chat.ChatPersistence;
 import com.example.tibiachat.chat.SentMessageHistory;
 import com.example.tibiachat.config.TibiaChatConfig;
 import com.example.tibiachat.gui.TibiaChatConfigScreen;
@@ -12,6 +13,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
@@ -64,11 +66,22 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
         ClientSendMessageEvents.COMMAND.register(CHAT::onOutgoingCommand);
 
         SentMessageHistory.load();
+        ChatPersistence.load();
 
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> SentMessageHistory.applyToChat());
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            SentMessageHistory.applyToChat();
+            ChatPersistence.applyToHud();
+        });
+
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            ChatPersistence.load();
+            ChatPersistence.applyToHud();
+            SentMessageHistory.applyToChat();
+        });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             CONFIG.save();
             SentMessageHistory.save();
+            ChatPersistence.save();
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

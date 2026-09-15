@@ -272,7 +272,7 @@ public final class TibiaChatConfig {
 
 
     public static final int MIN_SENT_HISTORY = 1;
-    public static final int MAX_SENT_HISTORY = 100;
+    public static final int MAX_SENT_HISTORY = 1000;
     public static final int DEFAULT_SENT_HISTORY = 50;
 
     private boolean persistSentMessages = true;
@@ -289,11 +289,35 @@ public final class TibiaChatConfig {
         sentMessageHistoryLimit = DEFAULT_SENT_HISTORY;
     }
 
+    public static final int MIN_CHAT_HISTORY = 10;
+    public static final int MAX_CHAT_HISTORY = 100000;
+    public static final int DEFAULT_CHAT_HISTORY = 1000;
+
+    private boolean persistChat = true;
+    private int chatHistoryLimit = DEFAULT_CHAT_HISTORY;
+    private boolean persistTabs = true;
+
+    public boolean persistChat() { return persistChat; }
+    public void setPersistChat(boolean v) { persistChat = v; }
+
+    public int chatHistoryLimit() { return (int) clamp(chatHistoryLimit, MIN_CHAT_HISTORY, MAX_CHAT_HISTORY); }
+    public void setChatHistoryLimit(int v) { chatHistoryLimit = (int) clamp(v, MIN_CHAT_HISTORY, MAX_CHAT_HISTORY); }
+
+    public boolean persistTabs() { return persistTabs; }
+    public void setPersistTabs(boolean v) { persistTabs = v; }
+
+    public void resetChatPersistenceDefaults() {
+        persistChat = true;
+        chatHistoryLimit = DEFAULT_CHAT_HISTORY;
+        persistTabs = true;
+    }
+
     public void resetAllDefaults() {
         resetHudDefaults();
         resetAppearanceDefaults();
         resetWhisperDetectionDefaults();
         resetSentHistoryDefaults();
+        resetChatPersistenceDefaults();
     }
 
     public void resetWhisperDetectionDefaults() {

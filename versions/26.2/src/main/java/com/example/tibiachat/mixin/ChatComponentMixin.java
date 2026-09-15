@@ -5,7 +5,9 @@ import com.example.tibiachat.chat.SentMessageHistory;
 import net.minecraft.client.gui.components.ChatComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -18,6 +20,12 @@ public abstract class ChatComponentMixin {
             return false;
         }
         return clearHistory;
+    }
+
+    @ModifyConstant(method = "addRecentChat", constant = @Constant(intValue = 100))
+    private int tibiaChatTabs$sentHistoryCap(int original) {
+        int limit = TibiaChatTabsClient.CONFIG.sentMessageHistoryLimit();
+        return Math.max(original, limit);
     }
 
     @Inject(method = "addRecentChat", at = @At("RETURN"))

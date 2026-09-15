@@ -562,6 +562,7 @@ public abstract class ChatScreenTabBarMixin {
         boolean selected = key.equals(selectedKey);
 
         TibiaChatTabsClient.CHAT.conversations().remove(key);
+        com.example.tibiachat.chat.ChatPersistence.scheduleSave();
 
         if (!selected) {
             tibiaChatTabs$clampTabScrollAfterClose();
@@ -600,8 +601,10 @@ public abstract class ChatScreenTabBarMixin {
         ChatComponent hud = Minecraft.getInstance().gui.getChat();
         hud.clearMessages(false);
 
-        for (var msg : TibiaChatTabsClient.CHAT.selectedMessages()) {
-            hud.addMessage(msg.component());
+        var msgs = TibiaChatTabsClient.CHAT.selectedMessages();
+        int start = Math.max(0, msgs.size() - 100);
+        for (int i = start; i < msgs.size(); i++) {
+            hud.addMessage(msgs.get(i).component());
         }
 
         tibiaChatTabs$scrollSelectedIntoView();

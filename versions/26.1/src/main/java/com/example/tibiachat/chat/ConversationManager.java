@@ -36,6 +36,15 @@ public final class ConversationManager {
     public void remove(String key) {
         conversations.remove(key);
     }
+
+    public void clear() {
+        conversations.clear();
+    }
+
+    public void put(Conversation conversation) {
+        if (conversation != null) conversations.put(conversation.key(), conversation);
+    }
+
     public List<Conversation> asList() {
         return new ArrayList<>(conversations.values());
     }

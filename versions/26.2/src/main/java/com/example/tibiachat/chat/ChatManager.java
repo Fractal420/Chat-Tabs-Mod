@@ -6,6 +6,7 @@ import com.mojang.authlib.GameProfile;
 import java.time.*;
 import java.util.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.network.chat.Component;
 
 public final class ChatManager {
@@ -51,7 +52,7 @@ public final class ChatManager {
     }
 
     public String classifyAndStore(Component message, GameProfile sender, Instant timestamp) {
-        String raw = message.getString();
+        String raw = ComponentJson.detectionText(message);
         Classification cl = classifier.incoming(message, sender);
 
         if (cl.type() == MessageType.WHISPER_OUTGOING) {
@@ -70,6 +71,8 @@ public final class ChatManager {
             );
 
             main.add(cm);
+            trimMain();
+            ChatPersistence.scheduleSave();
             return ConversationManager.MAIN;
         }
 
@@ -89,7 +92,10 @@ public final class ChatManager {
             );
 
             c.add(cm);
+            c.trimTo(config.chatHistoryLimit());
             main.add(cm);
+            trimMain();
+            ChatPersistence.scheduleSave();
 
             if (!c.key().equals(selectedKey)) {
                 c.markUnread();
@@ -109,6 +115,8 @@ public final class ChatManager {
         );
 
         main.add(cm);
+        trimMain();
+        ChatPersistence.scheduleSave();
         return ConversationManager.MAIN;
     }
 
@@ -138,12 +146,67 @@ public final class ChatManager {
             );
 
             c.add(cm);
+            c.trimTo(config.chatHistoryLimit());
             pendingEchoes.addLast(new PendingEcho(fp, System.nanoTime()));
+            ChatPersistence.scheduleSave();
 
             if (c.key().equals(selectedKey)) {
-                mc.gui.hud.getChat().addClientSystemMessage(cm.component());
+                addToHud(cm.component());
             }
         });
+    }
+
+    private void addToHud(Component component) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.gui == null) return;
+        ChatComponent chat = mc.gui.hud.getChat();
+        if (chat != null) chat.addClientSystemMessage(component);
+    }
+
+    public void refreshHud() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.gui == null) return;
+        ChatComponent chat = mc.gui.hud.getChat();
+        if (chat == null) return;
+        chat.clearMessages(false);
+        List<ChatMessage> msgs = selectedMessages();
+        int start = Math.max(0, msgs.size() - 100);
+        for (int i = start; i < msgs.size(); i++) {
+            chat.addClientSystemMessage(msgs.get(i).component());
+        }
+    }
+
+    public void trimMain() {
+        int limit = config.chatHistoryLimit();
+        while (main.size() > limit) main.remove(0);
+    }
+
+    public void replaceMain(List<ChatMessage> messages) {
+        main.clear();
+        if (messages != null) main.addAll(messages);
+        trimMain();
+    }
+
+    public void restoreState(List<ChatMessage> mainMessages, List<Conversation> restored, String selected) {
+        main.clear();
+        conversations.clear();
+        if (mainMessages != null) main.addAll(mainMessages);
+        trimMain();
+        if (restored != null) {
+            for (Conversation c : restored) {
+                c.trimTo(config.chatHistoryLimit());
+                conversations.put(c);
+            }
+        }
+        if (selected != null && !selected.isBlank()) {
+            if (ConversationManager.MAIN.equals(selected) || conversations.getByKey(selected) != null) {
+                selectedKey = selected;
+            } else {
+                selectedKey = ConversationManager.MAIN;
+            }
+        } else {
+            selectedKey = ConversationManager.MAIN;
+        }
     }
 
     private UUID findUuid(String name) {
@@ -225,6 +288,7 @@ public final class ChatManager {
     }
 
     public void tick() {
+        ChatPersistence.tick();
     }
 
     private record PendingEcho(String fingerprint, long nanoTime) {

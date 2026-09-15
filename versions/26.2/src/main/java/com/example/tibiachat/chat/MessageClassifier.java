@@ -24,7 +24,7 @@ public final class MessageClassifier {
     }
 
     public Classification incoming(Component message, GameProfile sender) {
-        String raw = message.getString();
+        String raw = ComponentJson.detectionText(message);
 
         try {
             Pattern selfEcho = Pattern.compile(config.buildSelfEchoRegex(), Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
