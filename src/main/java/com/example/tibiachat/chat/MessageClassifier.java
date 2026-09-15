@@ -9,32 +9,6 @@ import net.minecraft.network.chat.Component;
 public final class MessageClassifier {
     private final TibiaChatConfig config;
 
-    private static final String ICON_PREFIX = TibiaChatConfig.iconPrefixFragment();
-    private static final String TS = "(?:[\\[<]\\d{1,2}:\\d{2}(?::\\d{2})?[\\]>]\\s*)?";
-    private static final String HEAD = "(?:\\[[^\\]]{1,48}\\]\\s*)?";
-    private static final String PREFIX = TS + HEAD + ICON_PREFIX;
-
-    private static final Pattern SELF_ECHO = Pattern.compile(
-        "^" + PREFIX + "(?:You|you)\\s+whispers?(?:ed)?\\s+to\\s+"
-            + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s*:?[ \\u00a0]*(.*)$",
-        Pattern.CASE_INSENSITIVE | Pattern.DOTALL
-    );
-
-    private static final List<Pattern> INCOMING = List.of(
-        Pattern.compile("^" + PREFIX + "\\[" + ICON_PREFIX
-            + "([a-zA-Z0-9_]{2,16})\\s*->\\s*" + ICON_PREFIX + "(?:You|you)\\]\\s*:?[ \\u00a0]*(.*)$",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
-        Pattern.compile("^" + PREFIX
-            + "([a-zA-Z0-9_]{2,16})\\s+whispers?(?: to you)?\\s*:\\s*(.*)$",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
-        Pattern.compile("^" + PREFIX + "\\[(?:PM|MSG|WHISPER)\\]\\s*"
-            + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s*:\\s*(.*)$",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL),
-        Pattern.compile("^" + PREFIX
-            + "([a-zA-Z0-9_]{2,16})\\s+->\\s+(?:you|You)\\s*:\\s*(.*)$",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL)
-    );
-
     public MessageClassifier(TibiaChatConfig config) {
         this.config = config;
     }
@@ -52,25 +26,17 @@ public final class MessageClassifier {
     public Classification incoming(Component message, GameProfile sender) {
         String raw = message.getString();
 
-        Matcher echo = SELF_ECHO.matcher(raw);
-        if (echo.matches()) {
-            String name = echo.group(1).trim();
-            return new Classification(MessageType.WHISPER_OUTGOING, name, null, echo.group(2), name.toLowerCase(Locale.ROOT));
-        }
+        try {
+            Pattern selfEcho = Pattern.compile(config.buildSelfEchoRegex(), Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+            Matcher echo = selfEcho.matcher(raw);
+            if (echo.matches()) {
+                String name = echo.group(1).trim();
+                return new Classification(MessageType.WHISPER_OUTGOING, name, null, echo.group(2), name.toLowerCase(Locale.ROOT));
+            }
+        } catch (PatternSyntaxException ignored) {}
 
         if (!isPublicChatLine(raw)) {
-            for (Pattern p : INCOMING) {
-                Matcher m = p.matcher(raw);
-                if (m.matches()) {
-                    String name = m.group(1).trim();
-                    if (name.equalsIgnoreCase("you") || name.equalsIgnoreCase("me")) continue;
-                    UUID id = sender != null && sender.name() != null && sender.name().equalsIgnoreCase(name)
-                            ? sender.id() : null;
-                    return whisper(name, id, m.group(2));
-                }
-            }
-
-            for (String regex : config.incomingWhisperRegexes()) {
+            for (String regex : config.buildIncomingRegexes()) {
                 try {
                     Matcher m = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL).matcher(raw);
                     if (m.matches()) {

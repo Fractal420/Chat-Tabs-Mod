@@ -59,7 +59,7 @@ public class TibiaChatConfigScreen extends Screen {
                 .bounds(cx - 110, y, 220, 18).build());
         y += ROW + 2;
 
-        this.addRenderableWidget(Button.builder(Component.literal("PM Detection Rules"),
+        this.addRenderableWidget(Button.builder(Component.literal("Message Detection"),
                 btn -> { if (this.minecraft != null) this.minecraft.setScreen(new ChatRegexConfigScreen(this)); })
                 .bounds(cx - 110, y, 220, 18).build());
         y += ROW + 8;

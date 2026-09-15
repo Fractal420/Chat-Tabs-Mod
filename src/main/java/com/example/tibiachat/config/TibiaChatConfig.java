@@ -175,33 +175,68 @@ public final class TibiaChatConfig {
         setColorTheme(COLOR_THEMES.get(next).name);
     }
 
-
     private static final String DEFAULT_WHISPER_COMMAND = "/w";
-    private static final List<String> DEFAULT_WHISPER_ALIASES =
-            List.of("w", "msg", "tell", "whisper");
-    private static final String ICON_PREFIX = "(?:[^\\w\\s]{1,8}\\s*)?";
+    private static final List<String> DEFAULT_WHISPER_ALIASES = List.of("w", "msg", "tell", "whisper");
+    private static final String ICON_PREFIX = "(?:[^\\w\\s.]{1,8}\\s*)?";
+    private static final String DEFAULT_PLAYER_NAME = "[a-zA-Z0-9_.\\-]{2,32}";
 
-    private static final String TS_FRAG = "(?:[\\[<]\\d{1,2}:\\d{2}(?::\\d{2})?[\\]>]\\s*)?";
-    private static final String HEAD_FRAG = "(?:\\[[^\\]]{1,48}\\]\\s*)?";
+    public static final List<String> TIMESTAMP_STYLES = List.of(
+            "Flexible (recommended)",
+            "None",
+            "[HH:MM:SS]",
+            "[HH:MM]",
+            "<HH:MM:SS>",
+            "<HH:MM>",
+            "(HH:MM:SS)",
+            "HH:MM:SS"
+    );
 
-    private static final List<String> DEFAULT_INCOMING_WHISPER_REGEXES = List.of(
-            "^" + TS_FRAG + HEAD_FRAG + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s+whispers?(?: to you)?\\s*:\\s*(.*)$",
-            "^" + TS_FRAG + HEAD_FRAG + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s+->\\s+(?:you|You)\\s*:\\s*(.*)$",
-            "^" + TS_FRAG + HEAD_FRAG + ICON_PREFIX + "\\[(?:PM|MSG|WHISPER)\\]\\s*" + ICON_PREFIX + "([a-zA-Z0-9_]{2,16})\\s*:\\s*(.*)$"
+    public static final List<String> HEAD_STYLES = List.of(
+            "None",
+            "[anything]",
+            "[PLAYER head]",
+            "[PLAYER]",
+            "[PLAYER*]"
+    );
+
+    private static final List<String> DEFAULT_WHISPER_FORMATS = List.of(
+            "{player} whispers: {message}",
+            "{player} whispers to you: {message}",
+            "[{player} -> You]: {message}",
+            "{player} -> you: {message}",
+            "[PM] {player}: {message}",
+            "[MSG] {player}: {message}",
+            "[WHISPER] {player}: {message}"
     );
 
     private String whisperCommand = DEFAULT_WHISPER_COMMAND;
     private List<String> whisperAliases = new ArrayList<>(DEFAULT_WHISPER_ALIASES);
-    private List<String> incomingWhisperRegexes = new ArrayList<>(DEFAULT_INCOMING_WHISPER_REGEXES);
+    private boolean timestampsEnabled = true;
+    private String timestampStyle = "Flexible (recommended)";
+    private boolean headsEnabled = true;
+    private String headStyle = "[anything]";
+    private String playerNamePattern = DEFAULT_PLAYER_NAME;
+    private List<String> whisperFormats = new ArrayList<>(DEFAULT_WHISPER_FORMATS);
 
     public String whisperCommand() { return whisperCommand; }
-    public List<String> incomingWhisperRegexes() { return Collections.unmodifiableList(incomingWhisperRegexes); }
     public List<String> whisperAliases() { return Collections.unmodifiableList(whisperAliases); }
+    public boolean timestampsEnabled() { return timestampsEnabled; }
+    public void setTimestampsEnabled(boolean v) { timestampsEnabled = v; }
+    public String timestampStyle() { return timestampStyle == null ? "Flexible (recommended)" : timestampStyle; }
+    public void setTimestampStyle(String style) { if (style != null && !style.isBlank()) timestampStyle = style.trim(); }
+    public boolean headsEnabled() { return headsEnabled; }
+    public void setHeadsEnabled(boolean v) { headsEnabled = v; }
+    public String headStyle() { return headStyle == null ? "[anything]" : headStyle; }
+    public void setHeadStyle(String style) { if (style != null && !style.isBlank()) headStyle = style.trim(); }
+    public String playerNamePattern() { return playerNamePattern == null || playerNamePattern.isBlank() ? DEFAULT_PLAYER_NAME : playerNamePattern; }
+    public void setPlayerNamePattern(String pattern) { if (pattern != null && !pattern.isBlank()) playerNamePattern = pattern.trim(); }
+    public List<String> whisperFormats() { return Collections.unmodifiableList(whisperFormats); }
 
     public static String defaultWhisperCommand() { return DEFAULT_WHISPER_COMMAND; }
     public static List<String> defaultWhisperAliases() { return DEFAULT_WHISPER_ALIASES; }
-    public static List<String> defaultIncomingWhisperRegexes() { return DEFAULT_INCOMING_WHISPER_REGEXES; }
+    public static List<String> defaultWhisperFormats() { return DEFAULT_WHISPER_FORMATS; }
     public static String iconPrefixFragment() { return ICON_PREFIX; }
+    public static String defaultPlayerNamePattern() { return DEFAULT_PLAYER_NAME; }
 
     public boolean isWhisperCommand(String base) {
         String configured = whisperCommand.startsWith("/") ? whisperCommand.substring(1) : whisperCommand;
@@ -225,14 +260,14 @@ public final class TibiaChatConfig {
         whisperAliases = cleaned;
     }
 
-    public void setIncomingWhisperRegexes(List<String> regexes) {
+    public void setWhisperFormats(List<String> formats) {
         List<String> cleaned = new ArrayList<>();
-        if (regexes != null) {
-            for (String r : regexes) {
-                if (r != null && !r.isBlank()) cleaned.add(r);
+        if (formats != null) {
+            for (String f : formats) {
+                if (f != null && !f.isBlank()) cleaned.add(f.trim());
             }
         }
-        incomingWhisperRegexes = cleaned;
+        whisperFormats = cleaned;
     }
 
     public void resetAllDefaults() {
@@ -244,7 +279,85 @@ public final class TibiaChatConfig {
     public void resetWhisperDetectionDefaults() {
         whisperCommand = DEFAULT_WHISPER_COMMAND;
         whisperAliases = new ArrayList<>(DEFAULT_WHISPER_ALIASES);
-        incomingWhisperRegexes = new ArrayList<>(DEFAULT_INCOMING_WHISPER_REGEXES);
+        timestampsEnabled = true;
+        timestampStyle = "Flexible (recommended)";
+        headsEnabled = true;
+        headStyle = "[anything]";
+        playerNamePattern = DEFAULT_PLAYER_NAME;
+        whisperFormats = new ArrayList<>(DEFAULT_WHISPER_FORMATS);
+    }
+
+    public String buildTimestampFragment() {
+        if (!timestampsEnabled) return "";
+        String style = timestampStyle();
+        return switch (style) {
+            case "None" -> "";
+            case "[HH:MM:SS]" -> "(?:\\[\\d{1,2}:\\d{2}:\\d{2}\\]\\s*)?";
+            case "[HH:MM]" -> "(?:\\[\\d{1,2}:\\d{2}\\]\\s*)?";
+            case "<HH:MM:SS>" -> "(?:<\\d{1,2}:\\d{2}:\\d{2}>\\s*)?";
+            case "<HH:MM>" -> "(?:<\\d{1,2}:\\d{2}>\\s*)?";
+            case "(HH:MM:SS)" -> "(?:\\(\\d{1,2}:\\d{2}:\\d{2}\\)\\s*)?";
+            case "HH:MM:SS" -> "(?:\\d{1,2}:\\d{2}:\\d{2}\\s+)?";
+            default -> "(?:[\\[<]\\d{1,2}:\\d{2}(?::\\d{2})?[\\]>]\\s*)?";
+        };
+    }
+
+    public String buildHeadFragment() {
+        if (!headsEnabled) return "";
+        String style = headStyle();
+        String name = playerNamePattern();
+        return switch (style) {
+            case "None" -> "";
+            case "[PLAYER head]" -> "(?:\\[" + name + "\\s+head\\]\\s*)?";
+            case "[PLAYER]" -> "(?:\\[" + name + "\\]\\s*)?";
+            case "[PLAYER*]" -> "(?:\\[" + name + "[^\\]]*\\]\\s*)?";
+            default -> "(?:\\[[^\\]]{1,48}\\]\\s*)?";
+        };
+    }
+
+    public List<String> buildIncomingRegexes() {
+        String ts = buildTimestampFragment();
+        String head = buildHeadFragment();
+        String icon = ICON_PREFIX;
+        String name = "(" + playerNamePattern() + ")";
+        String prefix = "^" + ts + head + icon;
+        List<String> result = new ArrayList<>();
+        for (String fmt : whisperFormats) {
+            if (fmt == null || fmt.isBlank()) continue;
+            String pattern = fmt.replace("{player}", name).replace("{message}", "(.*)");
+            pattern = escapeLiterals(pattern, name, "(.*)");
+            result.add(prefix + pattern + "$");
+        }
+        return result;
+    }
+
+    public String buildSelfEchoRegex() {
+        String ts = buildTimestampFragment();
+        String head = buildHeadFragment();
+        String icon = ICON_PREFIX;
+        String name = "(" + playerNamePattern() + ")";
+        return "^" + ts + head + icon + "(?:You|you)\\s+whispers?(?:ed)?\\s+to\\s+"
+                + icon + name + "\\s*:?[ \\u00a0]*(.*)$";
+    }
+
+    private static String escapeLiterals(String template, String nameGroup, String msgGroup) {
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        while (i < template.length()) {
+            if (template.startsWith(nameGroup, i)) {
+                sb.append(nameGroup);
+                i += nameGroup.length();
+            } else if (template.startsWith(msgGroup, i)) {
+                sb.append(msgGroup);
+                i += msgGroup.length();
+            } else {
+                char c = template.charAt(i);
+                if ("\\.^$|?*+()[]{}".indexOf(c) >= 0) sb.append('\\');
+                sb.append(c);
+                i++;
+            }
+        }
+        return sb.toString();
     }
 
     public static TibiaChatConfig load() {

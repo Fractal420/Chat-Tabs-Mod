@@ -11,45 +11,68 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/**
- * Lets people change the whisper command / aliases and the private-message
- * detection regexes from in-game, instead of hand-editing the config JSON.
- */
 public class ChatRegexConfigScreen extends Screen {
 
-    private static final int ROW_HEIGHT = 22;
-    private static final int TOP_Y = 40;
-    private static final int LABEL_WIDTH = 130;
-    private static final int REMOVE_SIZE = 20;
-    private static final int BOTTOM_RESERVED = 90;
+    private static final int ROW = 20;
+    private static final int GAP = 2;
+    private static final int TOP = 28;
+    private static final int BOTTOM_PAD = 52;
+    private static final int REMOVE_W = 18;
+    private static final int LEFT_LABEL_W = 110;
+    private static final int LEFT_FIELD_W = 150;
+    private static final int LEFT_COL_W = LEFT_LABEL_W + 8 + LEFT_FIELD_W;
 
     private final Screen parent;
     private final TibiaChatConfig config = TibiaChatTabsClient.CONFIG;
 
-    private final List<String> workingRegexes = new ArrayList<>();
+    private final List<String> workingFormats = new ArrayList<>();
     private int scrollIndex = 0;
 
     private EditBox whisperCommandBox;
     private EditBox aliasesBox;
+    private EditBox playerNameBox;
     private int listTop;
     private int listBottom;
+    private int leftX;
+    private int rightX;
+    private int rightW;
 
     public ChatRegexConfigScreen(Screen parent) {
-        super(Component.literal("Private Message Detection"));
+        super(Component.literal("Message Detection"));
         this.parent = parent;
-        this.workingRegexes.addAll(config.incomingWhisperRegexes());
+        this.workingFormats.addAll(config.whisperFormats());
+    }
+
+    private void cycleTimestampStyle() {
+        List<String> styles = TibiaChatConfig.TIMESTAMP_STYLES;
+        int idx = styles.indexOf(config.timestampStyle());
+        if (idx < 0) idx = 0;
+        config.setTimestampStyle(styles.get((idx + 1) % styles.size()));
+        config.save();
+        this.rebuildWidgets();
+    }
+
+    private void cycleHeadStyle() {
+        List<String> styles = TibiaChatConfig.HEAD_STYLES;
+        int idx = styles.indexOf(config.headStyle());
+        if (idx < 0) idx = 0;
+        config.setHeadStyle(styles.get((idx + 1) % styles.size()));
+        config.save();
+        this.rebuildWidgets();
     }
 
     @Override
     protected void init() {
-        int centerX = this.width / 2;
-        int fieldWidth = 220;
-        int y = TOP_Y;
+        int margin = 12;
+        leftX = margin;
+        int gapBetween = 16;
+        rightX = leftX + LEFT_COL_W + gapBetween;
+        rightW = Math.max(180, this.width - rightX - margin - REMOVE_W - 6);
 
-        int cmdLabelX = centerX - (LABEL_WIDTH + fieldWidth) / 2;
-        int cmdFieldX = cmdLabelX + LABEL_WIDTH;
+        int y = TOP;
+        int fieldX = leftX + LEFT_LABEL_W + 8;
 
-        whisperCommandBox = new EditBox(this.font, cmdFieldX, y, fieldWidth, 20, Component.literal("Whisper command"));
+        whisperCommandBox = new EditBox(this.font, fieldX, y, LEFT_FIELD_W, 18, Component.literal("cmd"));
         whisperCommandBox.setValue(config.whisperCommand());
         whisperCommandBox.setResponder(text -> {
             if (!text.isBlank()) {
@@ -58,89 +81,130 @@ public class ChatRegexConfigScreen extends Screen {
             }
         });
         this.addRenderableWidget(whisperCommandBox);
-        y += ROW_HEIGHT + 6;
+        y += ROW + GAP;
 
-        aliasesBox = new EditBox(this.font, cmdFieldX, y, fieldWidth, 20, Component.literal("Aliases"));
+        aliasesBox = new EditBox(this.font, fieldX, y, LEFT_FIELD_W, 18, Component.literal("aliases"));
         aliasesBox.setValue(String.join(", ", config.whisperAliases()));
         aliasesBox.setResponder(text -> {
-            List<String> aliases = List.of(text.split(","));
-            config.setWhisperAliases(aliases);
+            config.setWhisperAliases(List.of(text.split(",")));
             config.save();
         });
         this.addRenderableWidget(aliasesBox);
-        y += ROW_HEIGHT + 14;
+        y += ROW + GAP + 4;
 
-        listTop = y;
-        listBottom = this.height - BOTTOM_RESERVED;
+        this.addRenderableWidget(Button.builder(
+                Component.literal("Timestamps: " + (config.timestampsEnabled() ? "ON" : "OFF")),
+                btn -> {
+                    config.setTimestampsEnabled(!config.timestampsEnabled());
+                    config.save();
+                    this.rebuildWidgets();
+                }).bounds(leftX, y, LEFT_COL_W, 18).build());
+        y += ROW + GAP;
 
-        int visibleRows = Math.max(1, (listBottom - listTop) / ROW_HEIGHT);
-        int maxScroll = Math.max(0, workingRegexes.size() - visibleRows);
+        this.addRenderableWidget(Button.builder(
+                Component.literal("Format: " + config.timestampStyle()),
+                btn -> cycleTimestampStyle()
+        ).bounds(leftX, y, LEFT_COL_W, 18).build());
+        y += ROW + GAP;
+
+        this.addRenderableWidget(Button.builder(
+                Component.literal("Heads: " + (config.headsEnabled() ? "ON" : "OFF")),
+                btn -> {
+                    config.setHeadsEnabled(!config.headsEnabled());
+                    config.save();
+                    this.rebuildWidgets();
+                }).bounds(leftX, y, LEFT_COL_W, 18).build());
+        y += ROW + GAP;
+
+        this.addRenderableWidget(Button.builder(
+                Component.literal("Head style: " + config.headStyle()),
+                btn -> cycleHeadStyle()
+        ).bounds(leftX, y, LEFT_COL_W, 18).build());
+        y += ROW + GAP + 4;
+
+        playerNameBox = new EditBox(this.font, fieldX, y, LEFT_FIELD_W, 18, Component.literal("name"));
+        playerNameBox.setValue(config.playerNamePattern());
+        playerNameBox.setMaxLength(80);
+        playerNameBox.setResponder(text -> {
+            if (!text.isBlank()) {
+                config.setPlayerNamePattern(text.trim());
+                config.save();
+            }
+        });
+        this.addRenderableWidget(playerNameBox);
+
+        listTop = TOP;
+        listBottom = this.height - BOTTOM_PAD;
+
+        int visibleRows = Math.max(1, (listBottom - listTop) / (ROW + GAP));
+        int maxScroll = Math.max(0, workingFormats.size() - visibleRows);
         scrollIndex = Math.max(0, Math.min(scrollIndex, maxScroll));
 
-        int rowFieldWidth = 280;
-        int rowX = centerX - (rowFieldWidth + REMOVE_SIZE + 6) / 2;
-        int removeX = rowX + rowFieldWidth + 6;
-
+        int removeX = rightX + rightW + 4;
         int rowY = listTop;
-        int lastIndexShown = Math.min(workingRegexes.size(), scrollIndex + visibleRows);
+        int last = Math.min(workingFormats.size(), scrollIndex + visibleRows);
 
-        for (int i = scrollIndex; i < lastIndexShown; i++) {
+        for (int i = scrollIndex; i < last; i++) {
             final int index = i;
-            EditBox row = new EditBox(this.font, rowX, rowY, rowFieldWidth, 20,
-                    Component.literal("Regex " + (index + 1)));
-            row.setMaxLength(300);
-            row.setValue(workingRegexes.get(index));
+            EditBox row = new EditBox(this.font, rightX, rowY, rightW, 18,
+                    Component.literal("f" + (index + 1)));
+            row.setMaxLength(200);
+            row.setValue(workingFormats.get(index));
             row.setResponder(text -> {
-                if (index < workingRegexes.size()) {
-                    workingRegexes.set(index, text);
-                    applyRegexes();
+                if (index < workingFormats.size()) {
+                    workingFormats.set(index, text);
+                    applyFormats();
                 }
             });
             this.addRenderableWidget(row);
 
             this.addRenderableWidget(Button.builder(Component.literal("x"), btn -> {
-                        if (index < workingRegexes.size()) {
-                            workingRegexes.remove(index);
-                            applyRegexes();
+                        if (index < workingFormats.size()) {
+                            workingFormats.remove(index);
+                            applyFormats();
                             this.rebuildWidgets();
                         }
                     })
-                    .bounds(removeX, rowY, REMOVE_SIZE, 20)
+                    .bounds(removeX, rowY, REMOVE_W, 18)
                     .build());
 
-            rowY += ROW_HEIGHT;
+            rowY += ROW + GAP;
         }
 
-        int bottomY = this.height - BOTTOM_RESERVED + 12;
+        int bottomY = this.height - BOTTOM_PAD + 10;
+        int btnW = 120;
+        int totalBtn = btnW * 3 + 16;
+        int btnStart = Math.max(margin, (this.width - totalBtn) / 2);
 
-        this.addRenderableWidget(Button.builder(Component.literal("+ Add Rule"), btn -> {
-                    workingRegexes.add("");
-                    applyRegexes();
-                    scrollIndex = Math.max(0, workingRegexes.size() - visibleRows);
+        this.addRenderableWidget(Button.builder(Component.literal("+ Add Format"), btn -> {
+                    workingFormats.add("{player} whispers: {message}");
+                    applyFormats();
+                    scrollIndex = Math.max(0, workingFormats.size() - visibleRows);
                     this.rebuildWidgets();
                 })
-                .bounds(centerX - 160, bottomY, 150, 20)
+                .bounds(btnStart, bottomY, btnW, 18)
                 .build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("Reset Defaults"), btn -> {
                     config.resetWhisperDetectionDefaults();
-                    workingRegexes.clear();
-                    workingRegexes.addAll(config.incomingWhisperRegexes());
+                    workingFormats.clear();
+                    workingFormats.addAll(config.whisperFormats());
                     whisperCommandBox.setValue(config.whisperCommand());
                     aliasesBox.setValue(String.join(", ", config.whisperAliases()));
+                    playerNameBox.setValue(config.playerNamePattern());
                     scrollIndex = 0;
                     this.rebuildWidgets();
                 })
-                .bounds(centerX + 10, bottomY, 150, 20)
+                .bounds(btnStart + btnW + 8, bottomY, btnW, 18)
                 .build());
 
         this.addRenderableWidget(Button.builder(Component.literal("Done"), btn -> this.onClose())
-                .bounds(centerX - 100, this.height - 28, 200, 20)
+                .bounds(btnStart + (btnW + 8) * 2, bottomY, btnW, 18)
                 .build());
     }
 
-    private void applyRegexes() {
-        config.setIncomingWhisperRegexes(workingRegexes.stream()
+    private void applyFormats() {
+        config.setWhisperFormats(workingFormats.stream()
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.toList()));
         config.save();
@@ -148,9 +212,9 @@ public class ChatRegexConfigScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (mouseY >= listTop && mouseY < listBottom) {
-            int visibleRows = Math.max(1, (listBottom - listTop) / ROW_HEIGHT);
-            int maxScroll = Math.max(0, workingRegexes.size() - visibleRows);
+        if (mouseX >= rightX && mouseY >= listTop && mouseY < listBottom) {
+            int visibleRows = Math.max(1, (listBottom - listTop) / (ROW + GAP));
+            int maxScroll = Math.max(0, workingFormats.size() - visibleRows);
             int newScroll = Math.max(0, Math.min(maxScroll, scrollIndex - (int) Math.signum(verticalAmount)));
             if (newScroll != scrollIndex) {
                 scrollIndex = newScroll;
@@ -164,19 +228,20 @@ public class ChatRegexConfigScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         super.extractRenderState(context, mouseX, mouseY, delta);
-        context.text(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
+        context.text(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
 
-        int centerX = this.width / 2;
-        int fieldWidth = 220;
-        int labelX = centerX - (LABEL_WIDTH + fieldWidth) / 2;
+        int y = TOP;
+        context.text(this.font, "Whisper cmd:", leftX, y + 5, 0xFFFFFFFF, true);
+        y += ROW + GAP;
+        context.text(this.font, "Aliases:", leftX, y + 5, 0xFFFFFFFF, true);
+        y += ROW + GAP + 4;
+        y += (ROW + GAP) * 4;
+        context.text(this.font, "Player name:", leftX, y + 5, 0xFFFFFFFF, true);
 
-        context.text(this.font, "Whisper command:", labelX, TOP_Y + 6, 0xFFFFFFFF, true);
-        context.text(this.font, "Aliases (comma-sep):", labelX, TOP_Y + ROW_HEIGHT + 6 + 6, 0xFFFFFFFF, true);
-        context.text(this.font, "Whisper detection regexes (scroll to see more):",
-                centerX, listTop - 12, 0xFFFFFFFF);
+        context.text(this.font, "Formats  ({player}  {message})", rightX, listTop - 12, 0xFFAAAAAA, true);
 
-        if (workingRegexes.isEmpty()) {
-            context.text(this.font, "No rules yet - click + Add Rule", centerX, listTop + 4, 0xFFAAAAAA);
+        if (workingFormats.isEmpty()) {
+            context.text(this.font, "No formats yet", rightX, listTop + 4, 0xFFAAAAAA, true);
         }
     }
 

@@ -39,7 +39,7 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 
 ### Configuration
 - **In-game settings GUI** — open via the ⚙ button on the tab bar, Mod Menu, or a configurable keybind ("Open Chat Tabs Settings").
-- **In-game PM detection editor** — change the whisper command, aliases, and incoming-whisper regexes from the settings screens.
+- **In-game PM detection editor** — change the whisper command, aliases, and whisper formats and detection options from the settings screens.
 - **Config file** — everything is stored in `config/tibia_chat_tabs.json` and is created automatically on first run.
 
 ## Requirements
@@ -67,25 +67,30 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 3. Whisper someone or wait for someone to whisper you — a tab for that player appears on the tab bar.
 4. Click a tab to switch; the chat log is filtered to that conversation and its unread count is cleared.
 5. Type a message and press Enter while a whisper tab is selected to reply as a whisper automatically.
-6. Use the ⚙ button on the tab bar (or Mod Menu / keybind) to open settings: themes, sizes, HUD layout, and PM detection rules.
+6. Use the ⚙ button on the tab bar (or Mod Menu / keybind) to open settings: themes, sizes, HUD layout, and Message Detection settings.
 
 Because the tab bar is rendered on top of the vanilla `ChatScreen`, tabs are only visible while the chat window is open. The unread-count badge on the main HUD lets you know a new whisper arrived even while the chat screen is closed.
 
 ## Whisper detection
 
-Messages are classified using pattern matching against the raw chat line, tuned for 6b6t's chat format by default. Built-in patterns tolerate optional timestamps, channel headers, and icon prefixes.
+Messages are classified with simple user-friendly settings (no regex knowledge needed). Defaults work with 6b6t including timestamps and heads.
 
-Recognized incoming formats include:
+You can toggle and customize:
 
-- `PlayerName whispers: message`
-- `PlayerName whispers to you: message`
-- `[PlayerName -> You]: message`
-- `PlayerName -> You: message`
-- `[PM] PlayerName: message` (also `MSG` / `WHISPER`)
+- Timestamps (ON/OFF) and common formats: `[HH:MM:SS]`, `[HH:MM]`, `<HH:MM:SS>`, etc.
+- Heads / prefixes (ON/OFF) and styles: `[anything]`, `[PLAYER head]`, `[PLAYER]`, etc.
+- Player name matching pattern
+- Whisper message formats using the placeholders `{player}` and `{message}`
 
-Your own outgoing whispers are recognized from the server's echo (e.g. `You whisper to PlayerName: message`) so they land in the correct tab instead of only on Main.
+Default formats:
 
-You can add extra patterns (or adjust the defaults) in the **PM Detection Rules** screen. Each custom regex needs two capture groups: the sender name and the message body.
+- `{player} whispers: {message}`
+- `{player} whispers to you: {message}`
+- `[{player} -> You]: {message}`
+- `{player} -> you: {message}`
+- `[PM] {player}: {message}` (also MSG / WHISPER)
+
+Outgoing echo is also detected automatically. Open **Message Detection** in the settings to customize for any server.
 
 ## Building from source
 
