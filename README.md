@@ -50,7 +50,7 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 ## Downloads
 
 - CurseForge: https://www.curseforge.com/minecraft/mc-mods/chat-tabs
-- You can also grab the jar from the [Releases] (https://github.com/Fractal420/Chat-Tabs-Mod/releases) page.
+- You can also grab the jar from the [Releases](https://github.com/Fractal420/Chat-Tabs-Mod/releases) page.
 
 ## Supported Minecraft versions
 
