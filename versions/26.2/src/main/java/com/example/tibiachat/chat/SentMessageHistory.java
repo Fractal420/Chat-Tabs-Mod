@@ -73,8 +73,9 @@ public final class SentMessageHistory {
 
     public static synchronized void trim() {
         int limit = TibiaChatTabsClient.CONFIG.sentMessageHistoryLimit();
-        while (messages.size() > limit) {
-            messages.remove(0);
+        int excess = messages.size() - limit;
+        if (excess > 0) {
+            messages.subList(0, excess).clear();
         }
     }
 

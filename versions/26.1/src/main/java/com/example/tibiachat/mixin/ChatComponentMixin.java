@@ -28,6 +28,12 @@ public abstract class ChatComponentMixin {
         return Math.max(original, limit);
     }
 
+    @ModifyConstant(method = "addMessage", constant = @Constant(intValue = 100), require = 0, allow = 8)
+    private int tibiaChatTabs$chatHistoryCap(int original) {
+        int limit = TibiaChatTabsClient.CONFIG.chatHistoryLimit();
+        return Math.max(original, limit);
+    }
+
     @Inject(method = "addRecentChat", at = @At("RETURN"))
     private void tibiaChatTabs$persistRecentChat(String message, CallbackInfo ci) {
         if (!TibiaChatTabsClient.CONFIG.persistSentMessages()) return;

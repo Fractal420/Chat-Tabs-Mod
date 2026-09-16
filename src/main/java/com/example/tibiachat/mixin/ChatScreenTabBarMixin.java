@@ -602,7 +602,8 @@ public abstract class ChatScreenTabBarMixin {
         hud.clearMessages(false);
 
         var msgs = TibiaChatTabsClient.CHAT.selectedMessages();
-        int start = Math.max(0, msgs.size() - 100);
+        int limit = TibiaChatTabsClient.CONFIG.chatHistoryLimit();
+        int start = Math.max(0, msgs.size() - limit);
         for (int i = start; i < msgs.size(); i++) {
             hud.addMessage(msgs.get(i).component());
         }

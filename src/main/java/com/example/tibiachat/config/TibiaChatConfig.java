@@ -218,18 +218,50 @@ public final class TibiaChatConfig {
     private String playerNamePattern = DEFAULT_PLAYER_NAME;
     private List<String> whisperFormats = new ArrayList<>(DEFAULT_WHISPER_FORMATS);
 
+    /** Bumped whenever regex-affecting settings change so classifiers can invalidate caches. */
+    private transient int regexCacheVersion = 0;
+
+    public int regexCacheVersion() {
+        return regexCacheVersion;
+    }
+
+    private void bumpRegexCache() {
+        regexCacheVersion++;
+    }
+
     public String whisperCommand() { return whisperCommand; }
     public List<String> whisperAliases() { return Collections.unmodifiableList(whisperAliases); }
     public boolean timestampsEnabled() { return timestampsEnabled; }
-    public void setTimestampsEnabled(boolean v) { timestampsEnabled = v; }
+    public void setTimestampsEnabled(boolean v) {
+        timestampsEnabled = v;
+        bumpRegexCache();
+    }
     public String timestampStyle() { return timestampStyle == null ? "Flexible (recommended)" : timestampStyle; }
-    public void setTimestampStyle(String style) { if (style != null && !style.isBlank()) timestampStyle = style.trim(); }
+    public void setTimestampStyle(String style) {
+        if (style != null && !style.isBlank()) {
+            timestampStyle = style.trim();
+            bumpRegexCache();
+        }
+    }
     public boolean headsEnabled() { return headsEnabled; }
-    public void setHeadsEnabled(boolean v) { headsEnabled = v; }
+    public void setHeadsEnabled(boolean v) {
+        headsEnabled = v;
+        bumpRegexCache();
+    }
     public String headStyle() { return headStyle == null ? "[anything]" : headStyle; }
-    public void setHeadStyle(String style) { if (style != null && !style.isBlank()) headStyle = style.trim(); }
+    public void setHeadStyle(String style) {
+        if (style != null && !style.isBlank()) {
+            headStyle = style.trim();
+            bumpRegexCache();
+        }
+    }
     public String playerNamePattern() { return playerNamePattern == null || playerNamePattern.isBlank() ? DEFAULT_PLAYER_NAME : playerNamePattern; }
-    public void setPlayerNamePattern(String pattern) { if (pattern != null && !pattern.isBlank()) playerNamePattern = pattern.trim(); }
+    public void setPlayerNamePattern(String pattern) {
+        if (pattern != null && !pattern.isBlank()) {
+            playerNamePattern = pattern.trim();
+            bumpRegexCache();
+        }
+    }
     public List<String> whisperFormats() { return Collections.unmodifiableList(whisperFormats); }
 
     public static String defaultWhisperCommand() { return DEFAULT_WHISPER_COMMAND; }
@@ -268,6 +300,7 @@ public final class TibiaChatConfig {
             }
         }
         whisperFormats = cleaned;
+        bumpRegexCache();
     }
 
 
@@ -329,6 +362,7 @@ public final class TibiaChatConfig {
         headStyle = "[anything]";
         playerNamePattern = DEFAULT_PLAYER_NAME;
         whisperFormats = new ArrayList<>(DEFAULT_WHISPER_FORMATS);
+        bumpRegexCache();
     }
 
     public String buildTimestampFragment() {

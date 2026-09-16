@@ -71,8 +71,10 @@ public final class ChatPersistence {
 
         try {
             Files.createDirectories(path().getParent());
-            Files.writeString(path(), new GsonBuilder().create().toJson(root));
-        } catch (Exception ignored) {}
+            Files.writeString(path(), GSON.toJson(root));
+        } catch (Exception e) {
+            // Persistence is best-effort; avoid crashing the client on IO errors
+        }
     }
 
     public static synchronized void load() {

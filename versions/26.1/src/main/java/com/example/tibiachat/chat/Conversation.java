@@ -35,7 +35,10 @@ public final class Conversation {
     }
 
     public void trimTo(int limit) {
-        while (messages.size() > limit) messages.remove(0);
+        int excess = messages.size() - limit;
+        if (excess > 0) {
+            messages.subList(0, excess).clear();
+        }
     }
 
     public int unread() { return unread; }

@@ -170,7 +170,8 @@ public final class ChatManager {
         if (chat == null) return;
         chat.clearMessages(false);
         List<ChatMessage> msgs = selectedMessages();
-        int start = Math.max(0, msgs.size() - 100);
+        int limit = config.chatHistoryLimit();
+        int start = Math.max(0, msgs.size() - limit);
         for (int i = start; i < msgs.size(); i++) {
             chat.addClientSystemMessage(msgs.get(i).component());
         }
@@ -178,7 +179,10 @@ public final class ChatManager {
 
     public void trimMain() {
         int limit = config.chatHistoryLimit();
-        while (main.size() > limit) main.remove(0);
+        int excess = main.size() - limit;
+        if (excess > 0) {
+            main.subList(0, excess).clear();
+        }
     }
 
     public void replaceMain(List<ChatMessage> messages) {
@@ -240,50 +244,44 @@ public final class ChatManager {
         return (name == null ? "" : name.toLowerCase(Locale.ROOT)) + "|" + body.trim();
     }
 
-    private boolean removeMatchingPendingBody(String raw) {
-        long now = System.nanoTime();
+    private static final long PENDING_ECHO_TTL_NS = 5_000_000_000L;
 
+    private void expirePendingEchoes(long now) {
         while (!pendingEchoes.isEmpty()
-            && now - pendingEchoes.peekFirst().nanoTime() > 5_000_000_000L) {
+                && now - pendingEchoes.peekFirst().nanoTime() > PENDING_ECHO_TTL_NS) {
             pendingEchoes.removeFirst();
         }
+    }
+
+    private boolean removeMatchingPendingBody(String raw) {
+        long now = System.nanoTime();
+        expirePendingEchoes(now);
 
         var it = pendingEchoes.iterator();
-
         while (it.hasNext()) {
             PendingEcho p = it.next();
-            String body = p.fingerprint().substring(
-                p.fingerprint().indexOf('|') + 1
-            );
-
+            int sep = p.fingerprint().indexOf('|');
+            String body = sep >= 0 ? p.fingerprint().substring(sep + 1) : "";
             if (!body.isBlank() && raw.contains(body)) {
                 it.remove();
                 return true;
             }
         }
-
         return false;
     }
 
     private boolean removeMatchingPending(String fp) {
         long now = System.nanoTime();
-
-        while (!pendingEchoes.isEmpty()
-            && now - pendingEchoes.peekFirst().nanoTime() > 5_000_000_000L) {
-            pendingEchoes.removeFirst();
-        }
+        expirePendingEchoes(now);
 
         var it = pendingEchoes.iterator();
-
         while (it.hasNext()) {
             PendingEcho p = it.next();
-
             if (p.fingerprint().equals(fp)) {
                 it.remove();
                 return true;
             }
         }
-
         return false;
     }
 
