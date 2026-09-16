@@ -6,8 +6,7 @@ public final class ConversationManager {
     public static final String MAIN = "main";
     private final Map<String, Conversation> conversations = new LinkedHashMap<>();
 
-    public ConversationManager() {
-    }
+    public ConversationManager() {}
 
     public Conversation getOrCreate(String name, UUID uuid) {
         String key = name.toLowerCase(Locale.ROOT);

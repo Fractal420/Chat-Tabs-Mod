@@ -86,8 +86,7 @@ public class ChatAppearanceConfigScreen extends Screen {
                 slider.setRealValueSilently(clamped);
                 apply.accept(clamped);
                 config.save();
-            } catch (NumberFormatException ignored) {
-            }
+            } catch (NumberFormatException ignored) {}
         });
 
         this.addRenderableWidget(slider);
@@ -111,8 +110,7 @@ public class ChatAppearanceConfigScreen extends Screen {
                 int parsed = Integer.parseInt(hex, 16);
                 apply.accept(parsed);
                 config.save();
-            } catch (NumberFormatException ignored) {
-            }
+            } catch (NumberFormatException ignored) {}
         });
 
         this.hexLabels.add(new HexLabel(label, labelX, y));

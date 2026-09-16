@@ -687,9 +687,7 @@ public abstract class ChatScreenTabBarMixin {
         }
 
         if (text.startsWith("/")) {
-            // The player typed a slash command while a private-message tab was open.
-            // Send it as a normal command instead of wrapping it in a whisper
-            // (which previously produced broken input like "/w playerx /tpa name").
+
             String command = text.substring(1);
             mc.player.connection.sendCommand(command);
             this.input.setValue("");

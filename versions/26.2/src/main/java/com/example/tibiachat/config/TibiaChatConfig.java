@@ -218,7 +218,6 @@ public final class TibiaChatConfig {
     private String playerNamePattern = DEFAULT_PLAYER_NAME;
     private List<String> whisperFormats = new ArrayList<>(DEFAULT_WHISPER_FORMATS);
 
-    /** Bumped whenever regex-affecting settings change so classifiers can invalidate caches. */
     private transient int regexCacheVersion = 0;
 
     public int regexCacheVersion() {
@@ -302,7 +301,6 @@ public final class TibiaChatConfig {
         whisperFormats = cleaned;
         bumpRegexCache();
     }
-
 
     public static final int MIN_SENT_HISTORY = 1;
     public static final int MAX_SENT_HISTORY = 1000;

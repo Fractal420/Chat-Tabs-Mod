@@ -289,6 +289,5 @@ public final class ChatManager {
         ChatPersistence.tick();
     }
 
-    private record PendingEcho(String fingerprint, long nanoTime) {
-    }
+    private record PendingEcho(String fingerprint, long nanoTime) {}
 }

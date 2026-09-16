@@ -9,7 +9,6 @@ import net.minecraft.network.chat.Component;
 public final class MessageClassifier {
     private final TibiaChatConfig config;
 
-    /** Cached compiled patterns; invalidated when config regex inputs change. */
     private Pattern selfEchoPattern;
     private List<Pattern> incomingPatterns = List.of();
     private int regexCacheVersion = -1;
@@ -32,17 +31,13 @@ public final class MessageClassifier {
                     config.buildSelfEchoRegex(),
                     Pattern.CASE_INSENSITIVE
             );
-        } catch (PatternSyntaxException ignored) {
-            // invalid user regex — treat as no match
-        }
+        } catch (PatternSyntaxException ignored) {}
 
         List<Pattern> compiled = new ArrayList<>();
         for (String regex : config.buildIncomingRegexes()) {
             try {
                 compiled.add(Pattern.compile(regex, Pattern.CASE_INSENSITIVE));
-            } catch (PatternSyntaxException ignored) {
-                // skip invalid patterns
-            }
+            } catch (PatternSyntaxException ignored) {}
         }
         incomingPatterns = List.copyOf(compiled);
     }
