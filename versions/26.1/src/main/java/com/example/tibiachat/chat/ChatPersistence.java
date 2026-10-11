@@ -45,7 +45,7 @@ public final class ChatPersistence {
 
         ChatManager chat = TibiaChatTabsClient.CHAT;
         JsonObject root = new JsonObject();
-        root.addProperty("selectedKey", chat.selectedKey());
+        root.addProperty("selectedKey", ConversationManager.MAIN);
         root.addProperty("version", 2);
 
         if (config.persistChat()) {

@@ -44,23 +44,15 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
         ));
 
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {
-            String key = CHAT.classifyAndStore(message, sender, timestamp);
-            if (key == null) return false;
-            String selected = CHAT.selectedKey();
-            if (com.example.tibiachat.chat.ConversationManager.MAIN.equals(selected)) return true;
-            return key.equals(selected);
+            CHAT.observe(message, sender, timestamp);
+            return true;
         });
 
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
-            if (overlay) {
-                return true;
+            if (!overlay) {
+                CHAT.observe(message, null, java.time.Instant.now());
             }
-
-            String key = CHAT.classifyAndStore(message, null, java.time.Instant.now());
-            if (key == null) return false;
-            String selected = CHAT.selectedKey();
-            if (com.example.tibiachat.chat.ConversationManager.MAIN.equals(selected)) return true;
-            return key.equals(selected);
+            return true;
         });
 
         ClientSendMessageEvents.COMMAND.register(CHAT::onOutgoingCommand);
@@ -74,9 +66,11 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
         });
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            ChatPersistence.load();
-            ChatPersistence.applyToHud();
-            SentMessageHistory.applyToChat();
+            client.execute(() -> {
+                ChatPersistence.load();
+                ChatPersistence.applyToHud();
+                SentMessageHistory.applyToChat();
+            });
         });
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             CONFIG.save();

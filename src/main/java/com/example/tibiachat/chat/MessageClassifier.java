@@ -42,6 +42,43 @@ public final class MessageClassifier {
         incomingPatterns = List.copyOf(compiled);
     }
 
+
+    private static Classification fallbackSelfEcho(String raw) {
+        String lower = raw.toLowerCase(Locale.ROOT);
+        int you = lower.indexOf("you whisper");
+        if (you < 0) {
+            you = lower.indexOf("you whispers");
+        }
+        if (you < 0) {
+            return null;
+        }
+        int to = lower.indexOf(" to ", you);
+        if (to < 0) {
+            return null;
+        }
+        int afterTo = to + 4;
+        while (afterTo < raw.length() && Character.isWhitespace(raw.charAt(afterTo))) {
+            afterTo++;
+        }
+        int colon = raw.indexOf(':', afterTo);
+        if (colon < 0) {
+            return null;
+        }
+        String name = raw.substring(afterTo, colon).trim();
+        name = name.replaceAll("[^a-zA-Z0-9_.\\-]", "");
+        if (name.length() < 2) {
+            return null;
+        }
+        String body = raw.substring(colon + 1).trim();
+        return new Classification(
+                MessageType.WHISPER_OUTGOING,
+                name,
+                null,
+                body,
+                name.toLowerCase(Locale.ROOT)
+        );
+    }
+
     private static boolean isPublicChatLine(String raw) {
         if (raw.indexOf('\u00BB') >= 0) return true;
         if (raw.indexOf('\u203A') >= 0) return true;
@@ -68,6 +105,11 @@ public final class MessageClassifier {
                         name.toLowerCase(Locale.ROOT)
                 );
             }
+        }
+
+        Classification fallback = fallbackSelfEcho(raw);
+        if (fallback != null) {
+            return fallback;
         }
 
         if (!isPublicChatLine(raw)) {

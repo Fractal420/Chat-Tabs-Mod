@@ -2,6 +2,7 @@ package com.example.tibiachat.chat;
 
 import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.config.TibiaChatConfig;
+import com.example.tibiachat.chat.ChatHudBuffer;
 import com.mojang.authlib.GameProfile;
 import java.time.*;
 import java.util.*;
@@ -14,8 +15,8 @@ public final class ChatManager {
     private final MessageClassifier classifier = new MessageClassifier(config);
     private final ConversationManager conversations = new ConversationManager();
     private final List<ChatMessage> main = new ArrayList<>();
-    private final Deque<PendingEcho> pendingEchoes = new ArrayDeque<>();
     private String selectedKey = ConversationManager.MAIN;
+    private boolean writingHud;
 
     public List<ChatMessage> main() {
         return Collections.unmodifiableList(main);
@@ -29,14 +30,60 @@ public final class ChatManager {
         return selectedKey;
     }
 
+    public boolean viewingPrivate() {
+        return !ConversationManager.MAIN.equals(selectedKey);
+    }
+
+    public boolean isWritingHud() {
+        return writingHud;
+    }
+
+    public void setWritingHud(boolean value) {
+        writingHud = value;
+    }
+
     public void select(String key) {
-        selectedKey = key;
-        Conversation c = conversations.getByKey(key);
-        if (c != null) c.clearUnread();
+        String next = key == null ? ConversationManager.MAIN : key;
+        if (next.equals(selectedKey)) {
+            return;
+        }
+
+        boolean wasPrivate = viewingPrivate();
+        boolean willPrivate = !ConversationManager.MAIN.equals(next);
+
+        if (!wasPrivate && willPrivate) {
+            ChatHudBuffer.snapshotMain();
+            selectedKey = next;
+            Conversation c = conversations.getByKey(selectedKey);
+            if (c != null) {
+                c.clearUnread();
+                c.setScroll(0);
+            }
+            loadPrivateHud();
+            return;
+        }
+
+        if (wasPrivate && !willPrivate) {
+            selectedKey = ConversationManager.MAIN;
+            ChatHudBuffer.restoreMain();
+            return;
+        }
+
+        if (wasPrivate && willPrivate) {
+            selectedKey = next;
+            Conversation c = conversations.getByKey(selectedKey);
+            if (c != null) {
+                c.clearUnread();
+                c.setScroll(0);
+            }
+            loadPrivateHud();
+        }
     }
 
     public List<ChatMessage> selectedMessages() {
-        if (ConversationManager.MAIN.equals(selectedKey)) return main;
+        if (ConversationManager.MAIN.equals(selectedKey)) {
+            return main;
+        }
         Conversation c = conversations.getByKey(selectedKey);
         return c == null ? List.of() : c.messages();
     }
@@ -47,63 +94,73 @@ public final class ChatManager {
 
     public int totalUnread() {
         int total = 0;
-        for (Conversation c : conversations.all()) total += c.unread();
+        for (Conversation c : conversations.all()) {
+            total += c.unread();
+        }
         return total;
     }
 
-    public String classifyAndStore(Component message, GameProfile sender, Instant timestamp) {
-        String raw = ComponentJson.detectionText(message);
+    public void observe(Component message, GameProfile sender, Instant timestamp) {
         Classification cl = classifier.incoming(message, sender);
 
-        if (cl.type() == MessageType.WHISPER_OUTGOING) {
+        if (cl.type() == MessageType.WHISPER_OUTGOING || cl.type() == MessageType.WHISPER_INCOMING) {
             String fp = fingerprint(cl.playerName(), cl.body());
-            removeMatchingPendingBody(raw);
-            removeMatchingPending(fp);
-
-            ChatMessage cm = make(
-                message,
-                MessageType.WHISPER_OUTGOING,
-                cl.playerName(),
-                cl.playerUuid(),
-                null,
-                timestamp,
-                fp
-            );
-
-            main.add(cm);
-            trimMain();
-            ChatPersistence.scheduleSave();
-            return ConversationManager.MAIN;
-        }
-
-        if (cl.type() == MessageType.WHISPER_INCOMING) {
-            String fp = fingerprint(cl.playerName(), cl.body());
-            if (removeMatchingPending(fp)) return null;
-
             Conversation c = conversations.getOrCreate(cl.playerName(), cl.playerUuid());
+
+            if (!c.messages().isEmpty()) {
+                Instant cutoff = Instant.now().minusMillis(2000);
+                for (int i = c.messages().size() - 1; i >= 0; i--) {
+                    ChatMessage last = c.messages().get(i);
+                    if (last.receivedAt().isBefore(cutoff)) {
+                        break;
+                    }
+                    if (fp.equals(last.fingerprint())) {
+                        return;
+                    }
+                    if (last.type() == cl.type()
+                            && last.speakerName() != null
+                            && cl.playerName() != null
+                            && last.speakerName().equalsIgnoreCase(cl.playerName())
+                            && normalizeBody(last).equals(normalizeBody(cl.body()))) {
+                        return;
+                    }
+                }
+            }
+
             ChatMessage cm = make(
                 message,
-                MessageType.WHISPER_INCOMING,
+                cl.type(),
                 cl.playerName(),
                 cl.playerUuid(),
                 c.key(),
                 timestamp,
                 fp
             );
-
             c.add(cm);
             c.trimTo(config.chatHistoryLimit());
-            main.add(cm);
-            trimMain();
-            ChatPersistence.scheduleSave();
-
-            if (!c.key().equals(selectedKey)) {
+            if (cl.type() == MessageType.WHISPER_INCOMING && !c.key().equals(selectedKey)) {
                 c.markUnread();
             }
+            ChatPersistence.scheduleSave();
 
-            return c.key();
+            if (c.key().equals(selectedKey) && viewingPrivate() && !writingHud) {
+                writingHud = true;
+                try {
+                    ChatComponent chat = chat();
+                    if (chat != null) {
+                        chat.addClientSystemMessage(message);
+                        ChatHudBuffer.capturePrivate(selectedKey);
+                    }
+                } finally {
+                    writingHud = false;
+                }
+            } else {
+                ChatHudBuffer.invalidatePrivate(c.key());
+            }
+            return;
         }
 
+        String raw = ComponentJson.detectionText(message);
         ChatMessage cm = make(
             message,
             cl.type(),
@@ -113,68 +170,98 @@ public final class ChatManager {
             timestamp,
             fingerprint(cl.playerName(), raw)
         );
-
         main.add(cm);
         trimMain();
         ChatPersistence.scheduleSave();
-        return ConversationManager.MAIN;
+    }
+
+    public boolean shouldAcceptHudMessage(Component message) {
+        if (!viewingPrivate() || writingHud) {
+            return true;
+        }
+        Classification cl = classifier.incoming(message, null);
+        if (cl.type() == MessageType.WHISPER_OUTGOING || cl.type() == MessageType.WHISPER_INCOMING) {
+            Conversation c = conversations.getByKey(selectedKey);
+            if (c != null && cl.playerName() != null && cl.playerName().equalsIgnoreCase(c.playerName())) {
+                return false;
+            }
+        }
+        ChatHudBuffer.queuePending(message);
+        return false;
     }
 
     public void onOutgoingCommand(String command) {
         classifier.outgoingCommand(command).ifPresent(out -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player == null) return;
-
-            Conversation c = conversations.getOrCreate(
-                out.playerName(),
-                findUuid(out.playerName())
-            );
-
-            String fp = fingerprint(out.playerName(), out.body());
-
-            Component rendered = Component.literal("You: ")
-                .append(Component.literal(out.body()));
-
-            ChatMessage cm = make(
-                rendered,
-                MessageType.WHISPER_OUTGOING,
-                mc.player.getName().getString(),
-                mc.player.getUUID(),
-                c.key(),
-                Instant.now(),
-                fp
-            );
-
-            c.add(cm);
-            c.trimTo(config.chatHistoryLimit());
-            pendingEchoes.addLast(new PendingEcho(fp, System.nanoTime()));
+            conversations.getOrCreate(out.playerName(), findUuid(out.playerName()));
             ChatPersistence.scheduleSave();
-
-            if (c.key().equals(selectedKey)) {
-                addToHud(cm.component());
-            }
         });
     }
 
-    private void addToHud(Component component) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.gui == null) return;
-        ChatComponent chat = mc.gui.getChat();
-        if (chat != null) chat.addClientSystemMessage(component);
+    public void resetToMain() {
+        if (ConversationManager.MAIN.equals(selectedKey)) {
+            return;
+        }
+        selectedKey = ConversationManager.MAIN;
+        ChatHudBuffer.restoreMain();
+        ChatPersistence.scheduleSave();
     }
 
     public void refreshHud() {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.gui == null) return;
-        ChatComponent chat = mc.gui.getChat();
-        if (chat == null) return;
-        chat.clearMessages(false);
-        List<ChatMessage> msgs = selectedMessages();
-        int limit = config.chatHistoryLimit();
-        int start = Math.max(0, msgs.size() - limit);
-        for (int i = start; i < msgs.size(); i++) {
-            chat.addClientSystemMessage(msgs.get(i).component());
+        if (viewingPrivate()) {
+            loadPrivateHud();
+        } else {
+            applyMainToHud();
         }
+    }
+
+    public void applyMainToHud() {
+        ChatComponent chat = chat();
+        if (chat == null) {
+            return;
+        }
+        writingHud = true;
+        try {
+            chat.clearMessages(false);
+            int limit = config.chatHistoryLimit();
+            int start = Math.max(0, main.size() - limit);
+            for (int i = start; i < main.size(); i++) {
+                chat.addClientSystemMessage(main.get(i).component());
+            }
+        } finally {
+            writingHud = false;
+        }
+    }
+
+    private void loadPrivateHud() {
+        if (ChatHudBuffer.hasPrivateSnapshot(selectedKey)) {
+            ChatHudBuffer.restorePrivate(selectedKey);
+            return;
+        }
+        ChatComponent chat = chat();
+        if (chat == null) {
+            return;
+        }
+        writingHud = true;
+        try {
+            chat.clearMessages(false);
+            List<ChatMessage> msgs = selectedMessages();
+            int limit = config.chatHistoryLimit();
+            int start = Math.max(0, msgs.size() - limit);
+            for (int i = start; i < msgs.size(); i++) {
+                chat.addClientSystemMessage(msgs.get(i).component());
+            }
+            ChatHudBuffer.capturePrivate(selectedKey);
+        } finally {
+            writingHud = false;
+        }
+    }
+
+    private ChatComponent chat() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.gui == null) {
+            return null;
+        }
+        return mc.gui.getChat();
     }
 
     public void trimMain() {
@@ -187,14 +274,18 @@ public final class ChatManager {
 
     public void replaceMain(List<ChatMessage> messages) {
         main.clear();
-        if (messages != null) main.addAll(messages);
+        if (messages != null) {
+            main.addAll(messages);
+        }
         trimMain();
     }
 
     public void restoreState(List<ChatMessage> mainMessages, List<Conversation> restored, String selected) {
         main.clear();
         conversations.clear();
-        if (mainMessages != null) main.addAll(mainMessages);
+        if (mainMessages != null) {
+            main.addAll(mainMessages);
+        }
         trimMain();
         if (restored != null) {
             for (Conversation c : restored) {
@@ -202,29 +293,20 @@ public final class ChatManager {
                 conversations.put(c);
             }
         }
-        if (selected != null && !selected.isBlank()) {
-            if (ConversationManager.MAIN.equals(selected) || conversations.getByKey(selected) != null) {
-                selectedKey = selected;
-            } else {
-                selectedKey = ConversationManager.MAIN;
-            }
-        } else {
-            selectedKey = ConversationManager.MAIN;
-        }
+        selectedKey = ConversationManager.MAIN;
     }
 
     private UUID findUuid(String name) {
         Minecraft mc = Minecraft.getInstance();
-
         if (mc.player != null && mc.player.getName().getString().equalsIgnoreCase(name)) {
             return mc.player.getUUID();
         }
-
         if (mc.getConnection() != null) {
             var p = mc.getConnection().getPlayerInfo(name);
-            if (p != null) return p.getProfile().id();
+            if (p != null) {
+                return p.getProfile().id();
+            }
         }
-
         return null;
     }
 
@@ -240,54 +322,31 @@ public final class ChatManager {
         return new ChatMessage(text, type, name, uuid, key, at, fp);
     }
 
+    private String normalizeBody(ChatMessage msg) {
+        String raw = ComponentJson.detectionText(msg.component());
+        int idx = raw.lastIndexOf(':');
+        if (idx >= 0 && idx + 1 < raw.length()) {
+            return raw.substring(idx + 1).trim();
+        }
+        return raw.trim();
+    }
+
+    private String normalizeBody(String body) {
+        return body == null ? "" : body.trim();
+    }
+
     private String fingerprint(String name, String body) {
-        return (name == null ? "" : name.toLowerCase(Locale.ROOT)) + "|" + body.trim();
-    }
-
-    private static final long PENDING_ECHO_TTL_NS = 5_000_000_000L;
-
-    private void expirePendingEchoes(long now) {
-        while (!pendingEchoes.isEmpty()
-                && now - pendingEchoes.peekFirst().nanoTime() > PENDING_ECHO_TTL_NS) {
-            pendingEchoes.removeFirst();
-        }
-    }
-
-    private boolean removeMatchingPendingBody(String raw) {
-        long now = System.nanoTime();
-        expirePendingEchoes(now);
-
-        var it = pendingEchoes.iterator();
-        while (it.hasNext()) {
-            PendingEcho p = it.next();
-            int sep = p.fingerprint().indexOf('|');
-            String body = sep >= 0 ? p.fingerprint().substring(sep + 1) : "";
-            if (!body.isBlank() && raw.contains(body)) {
-                it.remove();
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean removeMatchingPending(String fp) {
-        long now = System.nanoTime();
-        expirePendingEchoes(now);
-
-        var it = pendingEchoes.iterator();
-        while (it.hasNext()) {
-            PendingEcho p = it.next();
-            if (p.fingerprint().equals(fp)) {
-                it.remove();
-                return true;
-            }
-        }
-        return false;
+        return (name == null ? "" : name.toLowerCase(Locale.ROOT)) + "|" + (body == null ? "" : body.trim());
     }
 
     public void tick() {
         ChatPersistence.tick();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && (mc.screen == null || !(mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen))) {
+            if (!ConversationManager.MAIN.equals(selectedKey)) {
+                selectedKey = ConversationManager.MAIN;
+                ChatHudBuffer.restoreMain();
+            }
+        }
     }
-
-    private record PendingEcho(String fingerprint, long nanoTime) {}
 }

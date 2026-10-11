@@ -10,7 +10,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import java.util.List;
@@ -328,27 +327,36 @@ public abstract class ChatScreenTabBarMixin {
         int top = HudLayout.tabBarTop(screenH);
         int bottom = HudLayout.tabBarBottom(screenH);
 
-        if (mouseX < left || mouseX >= right || mouseY < top || mouseY >= bottom) {
-            return;
-        }
-
-        int tabsLeft = left + 2 + tibiaChatTabs$tabMainWidth();
-        int tabsRight = right - HudLayout.settingsBtnW() - 4;
-
-        int maxScroll = tibiaChatTabs$maxTabScroll(mc, tabsLeft, tabsRight);
-        if (maxScroll <= 0) {
-            return;
-        }
-
         double amount = Math.abs(horizontalAmount) > Math.abs(verticalAmount) ? horizontalAmount : verticalAmount;
-        if (amount == 0) {
+
+        if (mouseX >= left && mouseX < right && mouseY >= top && mouseY < bottom) {
+            int tabsLeft = left + 2 + tibiaChatTabs$tabMainWidth();
+            int tabsRight = right - HudLayout.settingsBtnW() - 4;
+
+            int maxScroll = tibiaChatTabs$maxTabScroll(mc, tabsLeft, tabsRight);
+            if (maxScroll <= 0 || amount == 0) {
+                return;
+            }
+
+            tibiaChatTabs$tabScroll -= (int) Math.round(amount * TAB_SCROLL_STEP);
+            tibiaChatTabs$clampTabScroll(mc, tabsLeft, tabsRight);
+
+            cir.setReturnValue(true);
             return;
         }
 
-        tibiaChatTabs$tabScroll -= (int) Math.round(amount * TAB_SCROLL_STEP);
-        tibiaChatTabs$clampTabScroll(mc, tabsLeft, tabsRight);
-
-        cir.setReturnValue(true);
+        if (TibiaChatTabsClient.CHAT.viewingPrivate() && amount != 0) {
+            Conversation conv = TibiaChatTabsClient.CHAT.selectedConversation();
+            if (conv != null) {
+                int delta = amount > 0 ? 1 : -1;
+                conv.scrollBy(delta);
+                int max = Math.max(0, conv.messages().size() - 1);
+                if (conv.scroll() > max) {
+                    conv.setScroll(max);
+                }
+                cir.setReturnValue(true);
+            }
+        }
     }
 
     @Inject(
@@ -569,13 +577,7 @@ public abstract class ChatScreenTabBarMixin {
             return;
         }
 
-        String nextKey = ConversationManager.MAIN;
-        for (Conversation c : TibiaChatTabsClient.CHAT.conversations().all()) {
-            nextKey = c.key();
-            break;
-        }
-
-        tibiaChatTabs$select(nextKey);
+        tibiaChatTabs$select(ConversationManager.MAIN);
     }
 
     private void tibiaChatTabs$clampTabScrollAfterClose() {
@@ -591,23 +593,16 @@ public abstract class ChatScreenTabBarMixin {
         tibiaChatTabs$clampTabScroll(mc, tabsLeft, tabsRight);
     }
 
+
+
     private void tibiaChatTabs$select(String key) {
         if (TibiaChatTabsClient.CHAT.selectedKey().equals(key)) {
             return;
         }
 
+        String previousKey = TibiaChatTabsClient.CHAT.selectedKey();
         TibiaChatTabsClient.CHAT.select(key);
-
-        ChatComponent hud = Minecraft.getInstance().gui.getChat();
-        hud.clearMessages(false);
-
-        var msgs = TibiaChatTabsClient.CHAT.selectedMessages();
-        int limit = TibiaChatTabsClient.CONFIG.chatHistoryLimit();
-        int start = Math.max(0, msgs.size() - limit);
-        for (int i = start; i < msgs.size(); i++) {
-            hud.addMessage(msgs.get(i).component());
-        }
-
+        tibiaChatTabs$applyReplyPrefix(previousKey);
         tibiaChatTabs$scrollSelectedIntoView();
     }
 
@@ -651,57 +646,113 @@ public abstract class ChatScreenTabBarMixin {
         }
     }
 
-    @Inject(
-            method = "keyPressed",
-            at = @At("HEAD"),
-            cancellable = true,
-            require = 0
-    )
-    private void tibiaChatTabs$onKey(
-            KeyEvent input,
-            CallbackInfoReturnable<Boolean> cir
-    ) {
-        if (input.key() != GLFW.GLFW_KEY_ENTER && input.key() != GLFW.GLFW_KEY_KP_ENTER) {
+    private String tibiaChatTabs$replyPrefix(String playerName) {
+        String cmd = TibiaChatTabsClient.CONFIG.whisperCommand();
+        if (cmd == null || cmd.isBlank()) {
+            cmd = "/w";
+        }
+        if (!cmd.startsWith("/")) {
+            cmd = "/" + cmd;
+        }
+        return cmd + " " + playerName + " ";
+    }
+
+    private void tibiaChatTabs$applyReplyPrefix(String previousKey) {
+        if (this.input == null) {
             return;
         }
 
         String key = TibiaChatTabsClient.CHAT.selectedKey();
         if (ConversationManager.MAIN.equals(key)) {
+            if (previousKey != null && !ConversationManager.MAIN.equals(previousKey)) {
+                Conversation prev = TibiaChatTabsClient.CHAT.conversations().getByKey(previousKey);
+                if (prev != null) {
+                    String prefix = tibiaChatTabs$replyPrefix(prev.playerName());
+                    String current = this.input.getValue();
+                    if (current.startsWith(prefix) || current.equals(prefix.trim())) {
+                        this.input.setValue("");
+                    }
+                } else {
+                    String current = this.input.getValue();
+                    String cmd = TibiaChatTabsClient.CONFIG.whisperCommand();
+                    if (cmd == null || cmd.isBlank()) {
+                        cmd = "/w";
+                    }
+                    if (!cmd.startsWith("/")) {
+                        cmd = "/" + cmd;
+                    }
+                    if (current.startsWith(cmd + " ")) {
+                        this.input.setValue("");
+                    }
+                }
+            }
             return;
         }
 
         Conversation c = TibiaChatTabsClient.CHAT.conversations().getByKey(key);
-        if (c == null || this.input == null) {
+        if (c == null) {
             return;
         }
 
-        String text = this.input.getValue().trim();
-        if (text.isEmpty()) {
-            cir.setReturnValue(true);
+        String prefix = tibiaChatTabs$replyPrefix(c.playerName());
+        String current = this.input.getValue();
+        if (!current.equals(prefix)) {
+            this.input.setValue(prefix);
+            this.input.setCursorPosition(prefix.length());
+            this.input.setHighlightPos(prefix.length());
+        }
+    }
+
+
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true, require = 0)
+    private void tibiaChatTabs$keepOpenOnPrivateEnter(net.minecraft.client.input.KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        if (!TibiaChatTabsClient.CHAT.viewingPrivate()) {
             return;
         }
-
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        int key = event.key();
+        if (key != GLFW.GLFW_KEY_ENTER && key != GLFW.GLFW_KEY_KP_ENTER) {
             return;
         }
-
-        if (text.startsWith("/")) {
-
-            String command = text.substring(1);
-            mc.player.connection.sendCommand(command);
+        if (this.input == null) {
+            return;
+        }
+        ChatScreen self = (ChatScreen) (Object) this;
+        self.handleChatInput(this.input.getValue(), true);
+        Conversation c = TibiaChatTabsClient.CHAT.selectedConversation();
+        if (c != null) {
+            String prefix = tibiaChatTabs$replyPrefix(c.playerName());
+            this.input.setValue(prefix);
+            this.input.setCursorPosition(prefix.length());
+            this.input.setHighlightPos(prefix.length());
+        } else {
             this.input.setValue("");
-            cir.setReturnValue(true);
-            return;
         }
-
-        String whisperCmd = TibiaChatTabsClient.CONFIG.whisperCommand();
-        String body = whisperCmd + " " + c.playerName() + " " + text;
-        String command = body.startsWith("/") ? body.substring(1) : body;
-
-        mc.player.connection.sendCommand(command);
-        this.input.setValue("");
-
         cir.setReturnValue(true);
+    }
+
+    @Inject(method = "init", at = @At("TAIL"))
+    private void tibiaChatTabs$onInit(CallbackInfo ci) {
+        if (!ConversationManager.MAIN.equals(TibiaChatTabsClient.CHAT.selectedKey())) {
+            TibiaChatTabsClient.CHAT.select(ConversationManager.MAIN);
+        }
+        tibiaChatTabs$applyReplyPrefix(null);
+    }
+
+    @Inject(method = "removed", at = @At("HEAD"))
+    private void tibiaChatTabs$onRemoved(CallbackInfo ci) {
+        if (this.input != null) {
+            String current = this.input.getValue();
+            String cmd = TibiaChatTabsClient.CONFIG.whisperCommand();
+            if (cmd == null || cmd.isBlank()) {
+                cmd = "/w";
+            }
+            if (!cmd.startsWith("/")) {
+                cmd = "/" + cmd;
+            }
+            if (current.startsWith(cmd + " ")) {
+                this.input.setValue("");
+            }
+        }
+        TibiaChatTabsClient.CHAT.resetToMain();
     }
 }
