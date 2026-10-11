@@ -304,7 +304,7 @@ public final class TibiaChatConfig {
 
     public static final int MIN_SENT_HISTORY = 1;
     public static final int MAX_SENT_HISTORY = 1000;
-    public static final int DEFAULT_SENT_HISTORY = 50;
+    public static final int DEFAULT_SENT_HISTORY = 100;
 
     private boolean persistSentMessages = true;
     private int sentMessageHistoryLimit = DEFAULT_SENT_HISTORY;
@@ -345,7 +345,7 @@ public final class TibiaChatConfig {
 
     public static final int MIN_WHISPER_COOLDOWN = 0;
     public static final int MAX_WHISPER_COOLDOWN = 60;
-    public static final int DEFAULT_WHISPER_COOLDOWN = 0;
+    public static final int DEFAULT_WHISPER_COOLDOWN = 3;
 
     private int whisperCooldownSeconds = DEFAULT_WHISPER_COOLDOWN;
 
@@ -363,11 +363,11 @@ public final class TibiaChatConfig {
 
     public static final int MIN_NOTIF_VOLUME = 0;
     public static final int MAX_NOTIF_VOLUME = 100;
-    public static final int DEFAULT_NOTIF_VOLUME = 80;
+    public static final int DEFAULT_NOTIF_VOLUME = 100;
 
     private boolean notifSoundEnabled = true;
     private int notifSoundVolume = DEFAULT_NOTIF_VOLUME;
-    private int notifSoundIndex = 0;
+    private int notifSoundIndex = 5;
 
     public boolean notifSoundEnabled() {
         return notifSoundEnabled;
@@ -404,7 +404,7 @@ public final class TibiaChatConfig {
     public void resetNotifSoundDefaults() {
         notifSoundEnabled = true;
         notifSoundVolume = DEFAULT_NOTIF_VOLUME;
-        notifSoundIndex = 0;
+        notifSoundIndex = 5;
     }
 
     public void resetAllDefaults() {
