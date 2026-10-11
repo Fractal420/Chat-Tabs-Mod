@@ -356,18 +356,7 @@ public abstract class ChatScreenTabBarMixin {
             return;
         }
 
-        if (TibiaChatTabsClient.CHAT.viewingPrivate() && amount != 0) {
-            Conversation conv = TibiaChatTabsClient.CHAT.selectedConversation();
-            if (conv != null) {
-                int delta = amount > 0 ? 1 : -1;
-                conv.scrollBy(delta);
-                int max = Math.max(0, conv.messages().size() - 1);
-                if (conv.scroll() > max) {
-                    conv.setScroll(max);
-                }
-                cir.setReturnValue(true);
-            }
-        }
+
     }
 
     @Inject(
