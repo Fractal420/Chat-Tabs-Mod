@@ -186,6 +186,79 @@ public abstract class ChatScreenTabBarMixin {
             ctx.fill(lx - 2, ly - 2, lx + labelW + 2, ly + 10, 0xC0000000);
             ctx.drawString(mc.font, Component.literal(label), lx, ly, 0xFFFF6B6B, true);
         }
+
+        tibiaChatTabs$drawUnreadPanel(ctx, mc, screenH);
+    }
+
+    private void tibiaChatTabs$drawUnreadPanel(GuiGraphics ctx, Minecraft mc, int screenH) {
+        int unread = TibiaChatTabsClient.CHAT.totalUnread();
+        com.example.tibiachat.hud.UnreadNotifier.clearEntries();
+        if (unread <= 0) {
+            com.example.tibiachat.hud.UnreadNotifier.collapse();
+            return;
+        }
+
+        float scale = HudLayout.notifIconScale();
+        int baseX = HudLayout.notifIconX();
+        int baseY = HudLayout.notifIconY(screenH);
+        String badge = "\u2709 " + unread;
+        int badgeW = mc.font.width(badge);
+        int rowH = 12;
+
+        com.example.tibiachat.hud.UnreadNotifier.addEntry(
+                "__badge__",
+                baseX,
+                baseY,
+                baseX + Math.round((badgeW + 6) * scale),
+                baseY + Math.round(rowH * scale)
+        );
+
+        if (com.example.tibiachat.hud.UnreadNotifier.isExpanded()) {
+            java.util.List<com.example.tibiachat.chat.Conversation> list =
+                    com.example.tibiachat.hud.UnreadNotifier.unreadConversations();
+            int panelW = 0;
+            for (com.example.tibiachat.chat.Conversation c : list) {
+                String line = c.playerName() + "  " + c.unread();
+                panelW = Math.max(panelW, mc.font.width(line));
+            }
+            panelW = Math.max(panelW, badgeW) + 10;
+            int panelH = list.size() * rowH + 4;
+            int panelX = baseX;
+            int panelY = baseY - Math.round((panelH + 2) * scale);
+
+            ctx.pose().pushMatrix();
+            ctx.pose().translate(panelX, panelY);
+            ctx.pose().scale(scale, scale);
+            ctx.fill(-3, -3, panelW + 3, panelH + 3, 0xFF000000);
+            ctx.fill(-2, -2, panelW + 2, panelH + 2, 0xFF1A1A1A);
+            ctx.fill(-1, -1, panelW + 1, panelH + 1, 0xFF2A2A2A);
+
+            int ly = 2;
+            for (com.example.tibiachat.chat.Conversation c : list) {
+                String line = c.playerName() + "  " + c.unread();
+                ctx.fill(0, ly - 1, panelW, ly + rowH - 2, 0xFF3A6EA5);
+                ctx.drawString(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                int absY0 = panelY + Math.round(ly * scale);
+                int absY1 = panelY + Math.round((ly + rowH) * scale);
+                com.example.tibiachat.hud.UnreadNotifier.addEntry(
+                        c.key(),
+                        panelX,
+                        absY0,
+                        panelX + Math.round(panelW * scale),
+                        absY1
+                );
+                ly += rowH;
+            }
+            ctx.pose().popMatrix();
+        }
+
+        ctx.pose().pushMatrix();
+        ctx.pose().translate(baseX, baseY);
+        ctx.pose().scale(scale, scale);
+        ctx.fill(-3, -2, badgeW + 3, 10, 0xFF000000);
+        ctx.fill(-2, -1, badgeW + 2, 9, 0xFF303030);
+        ctx.drawString(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
+        ctx.pose().popMatrix();
     }
 
     private int tibiaChatTabs$totalTabsWidth(Minecraft mc) {
@@ -371,6 +444,15 @@ public abstract class ChatScreenTabBarMixin {
             CallbackInfoReturnable<Boolean> cir
     ) {
         if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            return;
+        }
+
+        String unreadHit = com.example.tibiachat.hud.UnreadNotifier.handleClick(click.x(), click.y());
+        if (unreadHit != null) {
+            if (!unreadHit.isEmpty()) {
+                tibiaChatTabs$select(unreadHit);
+            }
+            cir.setReturnValue(true);
             return;
         }
 
@@ -742,7 +824,10 @@ public abstract class ChatScreenTabBarMixin {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void tibiaChatTabs$onInit(CallbackInfo ci) {
-        if (!ConversationManager.MAIN.equals(TibiaChatTabsClient.CHAT.selectedKey())) {
+        String pending = TibiaChatTabsClient.CHAT.consumePendingOpenTab();
+        if (pending != null) {
+            TibiaChatTabsClient.CHAT.select(pending);
+        } else if (!ConversationManager.MAIN.equals(TibiaChatTabsClient.CHAT.selectedKey())) {
             TibiaChatTabsClient.CHAT.select(ConversationManager.MAIN);
         }
         tibiaChatTabs$applyReplyPrefix(null);

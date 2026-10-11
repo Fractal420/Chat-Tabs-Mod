@@ -6,6 +6,8 @@ import com.example.tibiachat.chat.SentMessageHistory;
 import com.example.tibiachat.config.TibiaChatConfig;
 import com.example.tibiachat.gui.TibiaChatConfigScreen;
 import com.example.tibiachat.hud.HudLayout;
+import com.example.tibiachat.hud.UnreadNotifier;
+import com.example.tibiachat.chat.Conversation;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -97,26 +99,72 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
 
     private void renderUnreadBadge(GuiGraphicsExtractor ctx, DeltaTracker tickCounter) {
         int unread = CHAT.totalUnread();
+        UnreadNotifier.clearEntries();
 
         if (unread <= 0) {
+            UnreadNotifier.collapse();
             return;
         }
 
         Minecraft mc = Minecraft.getInstance();
-        String label = "\u2709 " + unread;
-        int textWidth = mc.font.width(label);
-
-        int x = HudLayout.notifIconX();
-        int y = HudLayout.notifIconY(mc.getWindow().getGuiScaledHeight());
         float scale = HudLayout.notifIconScale();
+        int baseX = HudLayout.notifIconX();
+        int baseY = HudLayout.notifIconY(mc.getWindow().getGuiScaledHeight());
+
+        String badge = "\u2709 " + unread;
+        int badgeW = mc.font.width(badge);
+        int rowH = 12;
+
+        UnreadNotifier.addEntry(
+                "__badge__",
+                baseX,
+                baseY,
+                baseX + Math.round((badgeW + 6) * scale),
+                baseY + Math.round(rowH * scale)
+        );
+
+        if (UnreadNotifier.isExpanded()) {
+            java.util.List<Conversation> list = UnreadNotifier.unreadConversations();
+            int panelW = 0;
+            for (Conversation c : list) {
+                String line = c.playerName() + "  " + c.unread();
+                panelW = Math.max(panelW, mc.font.width(line));
+            }
+            panelW = Math.max(panelW, badgeW) + 10;
+            int panelH = list.size() * rowH + 4;
+            int panelX = baseX;
+            int panelY = baseY - Math.round((panelH + 2) * scale);
+
+            ctx.pose().pushMatrix();
+            ctx.pose().translate(panelX, panelY);
+            ctx.pose().scale(scale, scale);
+            ctx.fill(-2, -2, panelW + 2, panelH + 2, 0xE0101010);
+            ctx.fill(-1, -1, panelW + 1, panelH + 1, 0xE0222222);
+
+            int ly = 2;
+            for (Conversation c : list) {
+                String line = c.playerName() + "  " + c.unread();
+                ctx.fill(0, ly - 1, panelW, ly + rowH - 2, 0x803A6EA5);
+                ctx.text(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                int absY0 = panelY + Math.round(ly * scale);
+                int absY1 = panelY + Math.round((ly + rowH) * scale);
+                UnreadNotifier.addEntry(
+                        c.key(),
+                        panelX,
+                        absY0,
+                        panelX + Math.round(panelW * scale),
+                        absY1
+                );
+                ly += rowH;
+            }
+            ctx.pose().popMatrix();
+        }
 
         ctx.pose().pushMatrix();
-        ctx.pose().translate(x, y);
+        ctx.pose().translate(baseX, baseY);
         ctx.pose().scale(scale, scale);
-
-        ctx.fill(-3, -2, textWidth + 3, 10, 0x90000000);
-        ctx.text(mc.font, Component.literal(label), 0, 0, 0xFFFFD24A, true);
-
+        ctx.fill(-3, -2, badgeW + 3, 10, 0x90000000);
+        ctx.text(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
         ctx.pose().popMatrix();
     }
 }

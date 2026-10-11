@@ -47,6 +47,18 @@ public final class ChatManager {
         lastPrivateSendMillis = System.currentTimeMillis();
     }
 
+    private String pendingOpenTab;
+
+    public void requestOpenTab(String key) {
+        pendingOpenTab = key;
+    }
+
+    public String consumePendingOpenTab() {
+        String key = pendingOpenTab;
+        pendingOpenTab = null;
+        return key;
+    }
+
     public long privateCooldownRemainingMs() {
         int seconds = config.whisperCooldownSeconds();
         if (seconds <= 0) {
