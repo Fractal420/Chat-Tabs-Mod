@@ -361,6 +361,52 @@ public final class TibiaChatConfig {
         whisperCooldownSeconds = DEFAULT_WHISPER_COOLDOWN;
     }
 
+    public static final int MIN_NOTIF_VOLUME = 0;
+    public static final int MAX_NOTIF_VOLUME = 100;
+    public static final int DEFAULT_NOTIF_VOLUME = 80;
+
+    private boolean notifSoundEnabled = true;
+    private int notifSoundVolume = DEFAULT_NOTIF_VOLUME;
+    private int notifSoundIndex = 0;
+
+    public boolean notifSoundEnabled() {
+        return notifSoundEnabled;
+    }
+
+    public void setNotifSoundEnabled(boolean v) {
+        notifSoundEnabled = v;
+    }
+
+    public int notifSoundVolume() {
+        return (int) clamp(notifSoundVolume, MIN_NOTIF_VOLUME, MAX_NOTIF_VOLUME);
+    }
+
+    public void setNotifSoundVolume(int v) {
+        notifSoundVolume = (int) clamp(v, MIN_NOTIF_VOLUME, MAX_NOTIF_VOLUME);
+    }
+
+    public int notifSoundIndex() {
+        return notifSoundIndex;
+    }
+
+    public void setNotifSoundIndex(int v) {
+        if (v < 0) {
+            notifSoundIndex = 0;
+        } else {
+            notifSoundIndex = v;
+        }
+    }
+
+    public int notifSoundIndexClamped() {
+        return com.example.tibiachat.chat.NotificationSounds.clampIndex(notifSoundIndex);
+    }
+
+    public void resetNotifSoundDefaults() {
+        notifSoundEnabled = true;
+        notifSoundVolume = DEFAULT_NOTIF_VOLUME;
+        notifSoundIndex = 0;
+    }
+
     public void resetAllDefaults() {
         resetHudDefaults();
         resetAppearanceDefaults();
@@ -368,6 +414,7 @@ public final class TibiaChatConfig {
         resetSentHistoryDefaults();
         resetChatPersistenceDefaults();
         resetWhisperCooldownDefaults();
+        resetNotifSoundDefaults();
     }
 
     public void resetWhisperDetectionDefaults() {

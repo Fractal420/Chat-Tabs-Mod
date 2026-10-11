@@ -169,8 +169,11 @@ public final class ChatManager {
             );
             c.add(cm);
             c.trimTo(config.chatHistoryLimit());
-            if (cl.type() == MessageType.WHISPER_INCOMING && !c.key().equals(selectedKey)) {
-                c.markUnread();
+            if (cl.type() == MessageType.WHISPER_INCOMING) {
+                if (!c.key().equals(selectedKey)) {
+                    c.markUnread();
+                }
+                NotificationSounds.playConfigured();
             }
             ChatPersistence.scheduleSave();
 

@@ -120,6 +120,32 @@ public class TibiaChatConfigScreen extends Screen {
                 TibiaChatConfig.MIN_WHISPER_COOLDOWN, TibiaChatConfig.MAX_WHISPER_COOLDOWN,
                 config.whisperCooldownSeconds(), true, "%.0fs",
                 v -> config.setWhisperCooldownSeconds((int) v));
+        y += 2;
+
+        this.addRenderableWidget(Button.builder(
+                Component.literal("Notif sound: " + (config.notifSoundEnabled() ? "ON" : "OFF")),
+                btn -> {
+                    config.setNotifSoundEnabled(!config.notifSoundEnabled());
+                    config.save();
+                    this.rebuildWidgets();
+                }).bounds(left, y, HALF_BTN + 40, 16).build());
+
+        this.addRenderableWidget(Button.builder(
+                Component.literal("Sound: " + com.example.tibiachat.chat.NotificationSounds.label(config.notifSoundIndex())),
+                btn -> {
+                    int next = com.example.tibiachat.chat.NotificationSounds.nextIndex(config.notifSoundIndex());
+                    config.setNotifSoundIndex(next);
+                    config.save();
+                    com.example.tibiachat.chat.NotificationSounds.play(
+                            next, config.notifSoundVolume() / 100.0f);
+                    this.rebuildWidgets();
+                }).bounds(right, y, HALF_BTN + 40, 16).build());
+        y += ROW;
+
+        y = addSlider(left, y, "Notif volume",
+                TibiaChatConfig.MIN_NOTIF_VOLUME, TibiaChatConfig.MAX_NOTIF_VOLUME,
+                config.notifSoundVolume(), true, "%.0f%%",
+                v -> config.setNotifSoundVolume((int) v));
         y += 6;
 
         this.addRenderableWidget(Button.builder(Component.literal("Reset Defaults"), btn -> {
