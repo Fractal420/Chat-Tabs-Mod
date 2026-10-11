@@ -343,12 +343,31 @@ public final class TibiaChatConfig {
         persistTabs = true;
     }
 
+    public static final int MIN_WHISPER_COOLDOWN = 0;
+    public static final int MAX_WHISPER_COOLDOWN = 60;
+    public static final int DEFAULT_WHISPER_COOLDOWN = 0;
+
+    private int whisperCooldownSeconds = DEFAULT_WHISPER_COOLDOWN;
+
+    public int whisperCooldownSeconds() {
+        return (int) clamp(whisperCooldownSeconds, MIN_WHISPER_COOLDOWN, MAX_WHISPER_COOLDOWN);
+    }
+
+    public void setWhisperCooldownSeconds(int v) {
+        whisperCooldownSeconds = (int) clamp(v, MIN_WHISPER_COOLDOWN, MAX_WHISPER_COOLDOWN);
+    }
+
+    public void resetWhisperCooldownDefaults() {
+        whisperCooldownSeconds = DEFAULT_WHISPER_COOLDOWN;
+    }
+
     public void resetAllDefaults() {
         resetHudDefaults();
         resetAppearanceDefaults();
         resetWhisperDetectionDefaults();
         resetSentHistoryDefaults();
         resetChatPersistenceDefaults();
+        resetWhisperCooldownDefaults();
     }
 
     public void resetWhisperDetectionDefaults() {

@@ -17,6 +17,7 @@ public final class ChatManager {
     private final List<ChatMessage> main = new ArrayList<>();
     private String selectedKey = ConversationManager.MAIN;
     private boolean writingHud;
+    private long lastPrivateSendMillis;
 
     public List<ChatMessage> main() {
         return Collections.unmodifiableList(main);
@@ -40,6 +41,24 @@ public final class ChatManager {
 
     public void setWritingHud(boolean value) {
         writingHud = value;
+    }
+
+    public void markPrivateSend() {
+        lastPrivateSendMillis = System.currentTimeMillis();
+    }
+
+    public long privateCooldownRemainingMs() {
+        int seconds = config.whisperCooldownSeconds();
+        if (seconds <= 0) {
+            return 0;
+        }
+        long elapsed = System.currentTimeMillis() - lastPrivateSendMillis;
+        long remaining = seconds * 1000L - elapsed;
+        return remaining > 0 ? remaining : 0;
+    }
+
+    public boolean isPrivateCooldownActive() {
+        return privateCooldownRemainingMs() > 0;
     }
 
     public void select(String key) {

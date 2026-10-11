@@ -175,6 +175,17 @@ public abstract class ChatScreenTabBarMixin {
         boolean sbHover = mouseX >= sbX && mouseX < sbX + sbW && mouseY >= sbY && mouseY < sbY + sbH;
         ctx.fill(sbX, sbY, sbX + sbW, sbY + sbH, sbHover ? 0xFF3A6EA5 : 0xCC202020);
         ctx.text(mc.font, Component.literal("⚙"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
+
+        long remainingMs = TibiaChatTabsClient.CHAT.privateCooldownRemainingMs();
+        if (TibiaChatTabsClient.CHAT.viewingPrivate() && remainingMs > 0) {
+            double secs = remainingMs / 1000.0;
+            String label = String.format(java.util.Locale.ROOT, "Cooldown: %.1fs", secs);
+            int labelW = mc.font.width(label);
+            int lx = 4;
+            int ly = screenH - 28;
+            ctx.fill(lx - 2, ly - 2, lx + labelW + 2, ly + 10, 0xC0000000);
+            ctx.text(mc.font, Component.literal(label), lx, ly, 0xFFFF6B6B, true);
+        }
     }
 
     private int tibiaChatTabs$totalTabsWidth(Minecraft mc) {
@@ -716,11 +727,21 @@ public abstract class ChatScreenTabBarMixin {
         if (this.input == null) {
             return;
         }
-        ChatScreen self = (ChatScreen) (Object) this;
-        self.handleChatInput(this.input.getValue(), true);
         Conversation c = TibiaChatTabsClient.CHAT.selectedConversation();
+        String prefix = c != null ? tibiaChatTabs$replyPrefix(c.playerName()) : "";
+        String value = this.input.getValue();
+        String trimmed = value == null ? "" : value.trim();
+        boolean empty = trimmed.isEmpty() || trimmed.equals(prefix.trim());
+        if (!empty) {
+            if (TibiaChatTabsClient.CHAT.isPrivateCooldownActive()) {
+                cir.setReturnValue(true);
+                return;
+            }
+            ChatScreen self = (ChatScreen) (Object) this;
+            self.handleChatInput(value, true);
+            TibiaChatTabsClient.CHAT.markPrivateSend();
+        }
         if (c != null) {
-            String prefix = tibiaChatTabs$replyPrefix(c.playerName());
             this.input.setValue(prefix);
             this.input.setCursorPosition(prefix.length());
             this.input.setHighlightPos(prefix.length());

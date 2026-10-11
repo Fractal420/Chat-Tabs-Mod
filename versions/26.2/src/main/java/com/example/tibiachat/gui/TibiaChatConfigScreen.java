@@ -116,6 +116,10 @@ public class TibiaChatConfigScreen extends Screen {
                     TibiaChatTabsClient.CHAT.trimMain();
                     ChatPersistence.scheduleSave();
                 });
+        y = addSlider(left, y, "Whisper cooldown",
+                TibiaChatConfig.MIN_WHISPER_COOLDOWN, TibiaChatConfig.MAX_WHISPER_COOLDOWN,
+                config.whisperCooldownSeconds(), true, "%.0fs",
+                v -> config.setWhisperCooldownSeconds((int) v));
         y += 6;
 
         this.addRenderableWidget(Button.builder(Component.literal("Reset Defaults"), btn -> {
