@@ -60,13 +60,21 @@ val Project.fullProjectVersion: String get() {
 
 val Project.artifactVersion: String get() {
     val buildNumber = githubRunNumber
-    val mc = mcVersion ?: "unknown"
+    val mc = name
     return when {
         buildNumber != null && isReleaseWorkflow -> "$modVersion-$mc-beta$buildNumber"
         buildNumber != null -> "$modVersion-$mc-dev$buildNumber"
         else -> "$modVersion-$mc"
     }
 }
+
+val Project.javaDependency: String
+    get() = when {
+        mcVersionInt >= 260000 -> ">=25"
+        mcVersionInt >= 12005 -> ">=21"
+        mcVersionInt >= 11800 -> ">=17"
+        else -> ">=8"
+    }
 
 val Project.placeholderProps: Map<String, Any?>
     get() = mapOf(
@@ -81,6 +89,7 @@ val Project.placeholderProps: Map<String, Any?>
         "loader_version" to fabricLoaderVersion,
         "fabric_api_version" to fabricApiVersion,
         "minecraft_dependency" to mcDependency,
+        "java_dependency" to javaDependency,
         "compatibility_level" to mixinJavaVersion,
         "version" to fullProjectVersion,
         "minecraft_version" to mcVersion
