@@ -10,7 +10,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 //#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+//#if MC >= 12109
 import net.minecraft.client.input.MouseButtonEvent;
+//#endif
 import net.minecraft.network.chat.Component;
 
 public class HudEditScreen extends Screen {
@@ -82,6 +84,7 @@ public class HudEditScreen extends Screen {
         int iconW = Math.max(Math.round((textW + 6) * iconScale), 20);
         int iconH = Math.max(Math.round(12 * iconScale), 14);
         context.fill(iconX - 3, iconY - 2, iconX + iconW, iconY + iconH, 0xB0C77A2A);
+        //#if MC >= 12106
         context.pose().pushMatrix();
         context.pose().translate(iconX, iconY);
         context.pose().scale(iconScale, iconScale);
@@ -91,6 +94,13 @@ public class HudEditScreen extends Screen {
         //$$ context.drawString(this.font, Component.literal(sample), 0, 0, 0xFFFFD24A, true);
         //#endif
         context.pose().popMatrix();
+        //#else
+        //$$ context.pose().pushPose();
+        //$$ context.pose().translate(iconX, iconY, 0);
+        //$$ context.pose().scale(iconScale, iconScale, 1f);
+        //$$ context.drawString(this.font, Component.literal(sample), 0, 0, 0xFFFFD24A, true);
+        //$$ context.pose().popPose();
+        //#endif
 
         int sbX = HudLayout.settingsBtnX(this.width);
         int sbY = HudLayout.settingsBtnY(this.height);
@@ -173,6 +183,7 @@ public class HudEditScreen extends Screen {
         }
     }
 
+    //#if MC >= 12109
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
         double x = click.x();
@@ -233,6 +244,66 @@ public class HudEditScreen extends Screen {
         }
         return super.mouseReleased(click);
     }
+    //#else
+    //$$ @Override
+    //$$ public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    //$$     if (withinIcon(mouseX, mouseY)) {
+    //$$         beginDrag(Target.ICON, mouseX, mouseY);
+    //$$         return true;
+    //$$     }
+    //$$     if (withinSettingsBtn(mouseX, mouseY)) {
+    //$$         beginDrag(Target.SETTINGS_BTN, mouseX, mouseY);
+    //$$         return true;
+    //$$     }
+    //$$     if (withinResizeHandle(mouseX, mouseY)) {
+    //$$         beginDrag(Target.TAB_BAR_RESIZE, mouseX, mouseY);
+    //$$         return true;
+    //$$     }
+    //$$     if (withinTabBar(mouseX, mouseY)) {
+    //$$         beginDrag(Target.TAB_BAR, mouseX, mouseY);
+    //$$         return true;
+    //$$     }
+    //$$     dragging = Target.NONE;
+    //$$     return super.mouseClicked(mouseX, mouseY, button);
+    //$$ }
+    //$$
+    //$$ @Override
+    //$$ public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    //$$     if (dragging == Target.NONE) {
+    //$$         return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    //$$     }
+    //$$     double dx = mouseX - dragStartMouseX;
+    //$$     double dy = mouseY - dragStartMouseY;
+    //$$     switch (dragging) {
+    //$$         case TAB_BAR -> {
+    //$$             config.setTabBarOffsetX((int) Math.round(dragStartOffsetX + dx));
+    //$$             config.setTabBarOffsetY((int) Math.round(dragStartOffsetY + dy));
+    //$$         }
+    //$$         case TAB_BAR_RESIZE -> config.setTabBarWidth(Math.max(50, (int) Math.round(dragStartWidth + dx)));
+    //$$         case ICON -> {
+    //$$             config.setNotifIconOffsetX((int) Math.round(dragStartOffsetX + dx));
+    //$$             config.setNotifIconOffsetY((int) Math.round(dragStartOffsetY + dy));
+    //$$         }
+    //$$         case SETTINGS_BTN -> {
+    //$$             config.setSettingsBtnOffsetX((int) Math.round(dragStartOffsetX + dx));
+    //$$             config.setSettingsBtnOffsetY((int) Math.round(dragStartOffsetY + dy));
+    //$$         }
+    //$$         default -> {}
+    //$$     }
+    //$$     return true;
+    //$$ }
+    //$$
+    //$$ @Override
+    //$$ public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    //$$     boolean was = dragging != Target.NONE;
+    //$$     dragging = Target.NONE;
+    //$$     if (was) {
+    //$$         config.save();
+    //$$         return true;
+    //$$     }
+    //$$     return super.mouseReleased(mouseX, mouseY, button);
+    //$$ }
+    //#endif
 
     @Override
     public void onClose() {

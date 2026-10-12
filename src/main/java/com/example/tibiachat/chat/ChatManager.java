@@ -354,7 +354,11 @@ public final class ChatManager {
         if (mc.getConnection() != null) {
             var p = mc.getConnection().getPlayerInfo(name);
             if (p != null) {
+                //#if MC >= 12109
                 return p.getProfile().id();
+                //#else
+                //$$ return p.getProfile().getId();
+                //#endif
             }
         }
         return null;

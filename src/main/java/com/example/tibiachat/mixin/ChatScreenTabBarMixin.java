@@ -5,6 +5,7 @@ import com.example.tibiachat.chat.Conversation;
 import com.example.tibiachat.chat.ConversationManager;
 import com.example.tibiachat.hud.HudLayout;
 import com.example.tibiachat.gui.TibiaChatConfigScreen;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 //#if MC >= 260100
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -14,10 +15,14 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
+//#if MC >= 12109
 import net.minecraft.client.input.MouseButtonEvent;
+//#endif
 import net.minecraft.network.chat.Component;
 import java.util.List;
-import org.lwjgl.glfw.GLFW;
+//#if MC < 260300
+//$$ import org.lwjgl.glfw.GLFW;
+//#endif
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -57,18 +62,25 @@ public abstract class ChatScreenTabBarMixin {
         return Math.round(clampedBase * scale);
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
+    //#if MC >= 260100
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void tibiaChatTabs$drawTabs(
-            //#if MC >= 260100
             GuiGraphicsExtractor ctx,
-            //#else
-            //$$ GuiGraphics ctx,
-            //#endif
             int mouseX,
             int mouseY,
             float delta,
             CallbackInfo ci
     ) {
+    //#else
+    //$$ @Inject(method = "render", at = @At("TAIL"))
+    //$$ private void tibiaChatTabs$drawTabs(
+    //$$         GuiGraphics ctx,
+    //$$         int mouseX,
+    //$$         int mouseY,
+    //$$         float delta,
+    //$$         CallbackInfo ci
+    //$$ ) {
+    //#endif
         Minecraft mc = Minecraft.getInstance();
 
         int screenW = mc.getWindow().getGuiScaledWidth();
@@ -254,9 +266,15 @@ public abstract class ChatScreenTabBarMixin {
             int panelX = baseX;
             int panelY = baseY - Math.round((panelH + 2) * scale);
 
+            //#if MC >= 12106
             ctx.pose().pushMatrix();
             ctx.pose().translate(panelX, panelY);
             ctx.pose().scale(scale, scale);
+            //#else
+            //$$ ctx.pose().pushPose();
+            //$$ ctx.pose().translate(panelX, panelY, 0);
+            //$$ ctx.pose().scale(scale, scale, 1f);
+            //#endif
             ctx.fill(-3, -3, panelW + 3, panelH + 3, 0xFF000000);
             ctx.fill(-2, -2, panelW + 2, panelH + 2, 0xFF1A1A1A);
             ctx.fill(-1, -1, panelW + 1, panelH + 1, 0xFF2A2A2A);
@@ -281,12 +299,22 @@ public abstract class ChatScreenTabBarMixin {
                 );
                 ly += rowH;
             }
+            //#if MC >= 12106
             ctx.pose().popMatrix();
+            //#else
+            //$$ ctx.pose().popPose();
+            //#endif
         }
 
+        //#if MC >= 12106
         ctx.pose().pushMatrix();
         ctx.pose().translate(baseX, baseY);
         ctx.pose().scale(scale, scale);
+        //#else
+        //$$ ctx.pose().pushPose();
+        //$$ ctx.pose().translate(baseX, baseY, 0);
+        //$$ ctx.pose().scale(scale, scale, 1f);
+        //#endif
         ctx.fill(-3, -2, badgeW + 3, 10, 0xFF000000);
         ctx.fill(-2, -1, badgeW + 2, 9, 0xFF303030);
         //#if MC >= 260100
@@ -294,7 +322,11 @@ public abstract class ChatScreenTabBarMixin {
         //#else
         //$$ ctx.drawString(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
         //#endif
+        //#if MC >= 12106
         ctx.pose().popMatrix();
+        //#else
+        //$$ ctx.pose().popPose();
+        //#endif
     }
 
     private int tibiaChatTabs$totalTabsWidth(Minecraft mc) {
@@ -368,9 +400,15 @@ public abstract class ChatScreenTabBarMixin {
             shown = mc.font.plainSubstrByWidth(shown, Math.max(1, Math.round((maxTextWidth - Math.round(8 * textScale)) / textScale))) + "…";
         }
 
+        //#if MC >= 12106
         ctx.pose().pushMatrix();
         ctx.pose().translate(x + Math.round(5 * textScale), top + 4);
         ctx.pose().scale(textScale, textScale);
+        //#else
+        //$$ ctx.pose().pushPose();
+        //$$ ctx.pose().translate(x + Math.round(5 * textScale), top + 4, 0);
+        //$$ ctx.pose().scale(textScale, textScale, 1f);
+        //#endif
 
         //#if MC >= 260100
         ctx.text(
@@ -392,7 +430,11 @@ public abstract class ChatScreenTabBarMixin {
         //$$ );
         //#endif
 
+        //#if MC >= 12106
         ctx.pose().popMatrix();
+        //#else
+        //$$ ctx.pose().popPose();
+        //#endif
 
         if (hover && !ConversationManager.MAIN.equals(key)) {
             int closeX = x + w - Math.round((CLOSE_SIZE + 2) * textScale);
@@ -494,8 +536,9 @@ public abstract class ChatScreenTabBarMixin {
 
     }
 
+    //#if MC >= 12109
     @Inject(
-            method = "mouseClicked",
+            method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
             at = @At("HEAD"),
             cancellable = true,
             require = 0
@@ -505,11 +548,35 @@ public abstract class ChatScreenTabBarMixin {
             boolean doubled,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        //#if MC >= 260300
+        if (click.button() != 0) {
             return;
         }
-
-        String unreadHit = com.example.tibiachat.hud.UnreadNotifier.handleClick(click.x(), click.y());
+        //#else
+        //$$ if (click.button() != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        //$$     return;
+        //$$ }
+        //#endif
+        double mx = click.x();
+        double my = click.y();
+    //#else
+    //$$ @Inject(
+    //$$         method = "mouseClicked(DDI)Z",
+    //$$         at = @At("HEAD"),
+    //$$         cancellable = true,
+    //$$         require = 0
+    //$$ )
+    //$$ private void tibiaChatTabs$onClick(
+    //$$         double mx,
+    //$$         double my,
+    //$$         int button,
+    //$$         CallbackInfoReturnable<Boolean> cir
+    //$$ ) {
+    //$$     if (button != 0) {
+    //$$         return;
+    //$$     }
+    //#endif
+        String unreadHit = com.example.tibiachat.hud.UnreadNotifier.handleClick(mx, my);
         if (unreadHit != null) {
             if (!unreadHit.isEmpty()) {
                 tibiaChatTabs$select(unreadHit);
@@ -532,7 +599,7 @@ public abstract class ChatScreenTabBarMixin {
         int sbY = HudLayout.settingsBtnY(screenH);
         int sbW = HudLayout.settingsBtnW();
         int sbH = HudLayout.settingsBtnH();
-        if (click.x() >= sbX && click.x() < sbX + sbW && click.y() >= sbY && click.y() < sbY + sbH) {
+        if (mx >= sbX && mx < sbX + sbW && my >= sbY && my < sbY + sbH) {
             //#if MC >= 260200
             mc.gui.setScreen(new TibiaChatConfigScreen((ChatScreen) (Object) this));
             //#else
@@ -542,14 +609,14 @@ public abstract class ChatScreenTabBarMixin {
             return;
         }
 
-        if (click.x() < left || click.x() >= right || click.y() < top || click.y() >= bottom) {
+        if (mx < left || mx >= right || my < top || my >= bottom) {
             return;
         }
 
         int mainW = tibiaChatTabs$tabMainWidth();
         int x = left + 2;
 
-        if (click.x() >= x && click.x() < x + mainW) {
+        if (mx >= x && mx < x + mainW) {
             tibiaChatTabs$dragKey = null;
             tibiaChatTabs$dragActive = false;
             tibiaChatTabs$select(ConversationManager.MAIN);
@@ -560,7 +627,7 @@ public abstract class ChatScreenTabBarMixin {
         int tabsLeft = x + mainW;
         int tabsRight = right - HudLayout.settingsBtnW() - 4;
 
-        if (click.x() < tabsLeft || click.x() > tabsRight) {
+        if (mx < tabsLeft || mx > tabsRight) {
             return;
         }
 
@@ -580,15 +647,15 @@ public abstract class ChatScreenTabBarMixin {
                 break;
             }
 
-            if (click.x() >= tabX && click.x() < tabX + w) {
-                if (tibiaChatTabs$isCloseHovered(click.x(), click.y(), tabX, w, top, bottom)) {
+            if (mx >= tabX && mx < tabX + w) {
+                if (tibiaChatTabs$isCloseHovered(mx, my, tabX, w, top, bottom)) {
                     tibiaChatTabs$closeTab(c.key());
                 } else {
                     tibiaChatTabs$dragKey = c.key();
                     tibiaChatTabs$dragActive = false;
-                    tibiaChatTabs$dragPressX = click.x();
-                    tibiaChatTabs$dragPressY = click.y();
-                    tibiaChatTabs$dragPointerOffsetX = (int) Math.round(click.x() - tabX);
+                    tibiaChatTabs$dragPressX = mx;
+                    tibiaChatTabs$dragPressY = my;
+                    tibiaChatTabs$dragPointerOffsetX = (int) Math.round(mx - tabX);
                     tibiaChatTabs$select(c.key());
                 }
                 cir.setReturnValue(true);
@@ -599,8 +666,9 @@ public abstract class ChatScreenTabBarMixin {
         }
     }
 
+    //#if MC >= 12109
     @Inject(
-            method = "mouseReleased",
+            method = "mouseReleased(Lnet/minecraft/client/input/MouseButtonEvent;)Z",
             at = @At("HEAD"),
             cancellable = true,
             require = 0
@@ -609,6 +677,20 @@ public abstract class ChatScreenTabBarMixin {
             MouseButtonEvent click,
             CallbackInfoReturnable<Boolean> cir
     ) {
+    //#else
+    //$$ @Inject(
+    //$$         method = "mouseReleased(DDI)Z",
+    //$$         at = @At("HEAD"),
+    //$$         cancellable = true,
+    //$$         require = 0
+    //$$ )
+    //$$ private void tibiaChatTabs$onMouseReleased(
+    //$$         double mouseX,
+    //$$         double mouseY,
+    //$$         int button,
+    //$$         CallbackInfoReturnable<Boolean> cir
+    //$$ ) {
+    //#endif
         if (tibiaChatTabs$dragKey == null) {
             return;
         }
@@ -623,6 +705,8 @@ public abstract class ChatScreenTabBarMixin {
         }
     }
 
+
+
     private void tibiaChatTabs$tickDrag(
             Minecraft mc,
             int mouseX,
@@ -636,8 +720,12 @@ public abstract class ChatScreenTabBarMixin {
             return;
         }
 
-        long window = mc.getWindow().handle();
-        boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        //#if MC >= 260300
+        boolean leftDown = InputConstants.isKeyDown(InputConstants.MOUSE_BUTTON_LEFT);
+        //#else
+        //$$ long window = mc.getWindow().handle();
+        //$$ boolean leftDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        //#endif
 
         if (!leftDown) {
             tibiaChatTabs$dragKey = null;
@@ -852,15 +940,27 @@ public abstract class ChatScreenTabBarMixin {
     }
 
 
-    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true, require = 0)
+    //#if MC >= 12109
+    @Inject(method = "keyPressed(Lnet/minecraft/client/input/KeyEvent;)Z", at = @At("HEAD"), cancellable = true, require = 0)
     private void tibiaChatTabs$keepOpenOnPrivateEnter(net.minecraft.client.input.KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
         if (!TibiaChatTabsClient.CHAT.viewingPrivate()) {
             return;
         }
         int key = event.key();
-        if (key != GLFW.GLFW_KEY_ENTER && key != GLFW.GLFW_KEY_KP_ENTER) {
+        // Enter=257, KP_Enter=335 (same in GLFW and SDL)
+        if (key != 257 && key != 335) {
             return;
         }
+    //#else
+    //$$ @Inject(method = "keyPressed(III)Z", at = @At("HEAD"), cancellable = true, require = 0)
+    //$$ private void tibiaChatTabs$keepOpenOnPrivateEnter(int key, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+    //$$     if (!TibiaChatTabsClient.CHAT.viewingPrivate()) {
+    //$$         return;
+    //$$     }
+    //$$     if (key != GLFW.GLFW_KEY_ENTER && key != GLFW.GLFW_KEY_KP_ENTER) {
+    //$$         return;
+    //$$     }
+    //#endif
         if (this.input == null) {
             return;
         }

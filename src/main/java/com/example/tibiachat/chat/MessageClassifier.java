@@ -121,9 +121,15 @@ public final class MessageClassifier {
                         continue;
                     }
                     UUID id = sender != null
+                            //#if MC >= 12109
                             && sender.name() != null
                             && sender.name().equalsIgnoreCase(name)
                             ? sender.id()
+                            //#else
+                            //$$ && sender.getName() != null
+                            //$$ && sender.getName().equalsIgnoreCase(name)
+                            //$$ ? sender.getId()
+                            //#endif
                             : null;
                     return whisper(name, id, m.groupCount() >= 2 ? m.group(2) : raw);
                 }
@@ -131,7 +137,11 @@ public final class MessageClassifier {
         }
 
         if (sender != null) {
+            //#if MC >= 12109
             return new Classification(MessageType.PUBLIC, sender.name(), sender.id(), raw, null);
+            //#else
+            //$$ return new Classification(MessageType.PUBLIC, sender.getName(), sender.getId(), raw, null);
+            //#endif
         }
         return new Classification(MessageType.SYSTEM, null, null, raw, null);
     }

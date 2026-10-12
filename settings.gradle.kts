@@ -21,11 +21,22 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-val versions = listOf("1.21.11", "26.1", "26.2")
+val versions = listOf(
+    "1.21.1", "1.21.3", "1.21.4", "1.21.5", "1.21.6", "1.21.8", "1.21.9", "1.21.11",
+    "26.1", "26.2", "26.3"
+)
 val mainProjectVersion = file("versions/mainProject").readText().trim()
 val preprocessParentChain = mapOf(
+    "1.21.1" to "1.21.3",
+    "1.21.3" to "1.21.4",
+    "1.21.4" to "1.21.5",
+    "1.21.5" to "1.21.6",
+    "1.21.6" to "1.21.8",
+    "1.21.8" to "1.21.9",
+    "1.21.9" to "1.21.11",
     "1.21.11" to "26.1",
-    "26.1" to "26.2"
+    "26.1" to "26.2",
+    "26.2" to "26.3"
 )
 
 fun expandWithPreprocessParents(requested: List<String>): List<String> {

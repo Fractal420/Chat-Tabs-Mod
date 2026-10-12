@@ -20,8 +20,12 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+//#if MC >= 12106
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+//#else
+//$$ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+//#endif
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -31,31 +35,67 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 //$$ import net.minecraft.client.gui.GuiGraphics;
 //#endif
 import net.minecraft.network.chat.Component;
+//#if MC >= 12111
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
+//#else
+//$$ import net.minecraft.resources.ResourceLocation;
+//#endif
+//#if MC < 260300
+//$$ import org.lwjgl.glfw.GLFW;
+//#endif
 
 public final class TibiaChatTabsClient implements ClientModInitializer {
     public static final String MOD_ID = "tibia_chat_tabs";
     public static final TibiaChatConfig CONFIG = TibiaChatConfig.load();
     public static final ChatManager CHAT = new ChatManager();
 
+    //#if MC >= 12111
     private static final KeyMapping.Category CHAT_TABS_CATEGORY =
             KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "key_category"));
+    //#else
+    //#if MC >= 12109
+    //$$ private static final KeyMapping.Category CHAT_TABS_CATEGORY =
+    //$$         KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath(MOD_ID, "key_category"));
+    //#endif
+    //#endif
 
     private static KeyMapping openSettingsKey;
 
     @Override
     public void onInitializeClient() {
-        //#if MC >= 260100
+        //#if MC >= 260300
         openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-//#else
-//$$         openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-//#endif
                 "key.chat_tabs.open_settings",
-                InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_UNKNOWN,
+                InputConstants.Type.KEYBOARD,
+                InputConstants.UNKNOWN.getValue(),
                 CHAT_TABS_CATEGORY
         ));
+        //#else
+        //#if MC >= 260100
+        //$$ openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+        //$$         "key.chat_tabs.open_settings",
+        //$$         InputConstants.Type.KEYSYM,
+        //$$         GLFW.GLFW_KEY_UNKNOWN,
+        //$$         CHAT_TABS_CATEGORY
+        //$$ ));
+        //#else
+        //#if MC >= 12109
+        //$$ openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        //$$         "key.chat_tabs.open_settings",
+        //$$         InputConstants.Type.KEYSYM,
+        //$$         GLFW.GLFW_KEY_UNKNOWN,
+        //$$         CHAT_TABS_CATEGORY
+        //$$ ));
+        //#else
+        //$$ openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        //$$         "key.chat_tabs.open_settings",
+        //$$         InputConstants.Type.KEYSYM,
+        //$$         GLFW.GLFW_KEY_UNKNOWN,
+        //$$         "key.categories.chat_tabs"
+        //$$ ));
+        //#endif
+        //#endif
+        //#endif
 
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, timestamp) -> {
             CHAT.observe(message, sender, timestamp);
@@ -108,12 +148,31 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
             }
         });
 
+        //#if MC >= 12106
+        //#if MC >= 12111
         HudElementRegistry.attachElementAfter(
                 VanillaHudElements.CHAT,
                 Identifier.fromNamespaceAndPath(MOD_ID, "unread_badge"),
                 this::renderUnreadBadge
         );
+        //#else
+        //$$ HudElementRegistry.attachElementAfter(
+        //$$         VanillaHudElements.CHAT,
+        //$$         ResourceLocation.fromNamespaceAndPath(MOD_ID, "unread_badge"),
+        //$$         this::renderUnreadBadge
+        //$$ );
+        //#endif
+        //#else
+        //$$ registerLegacyHud();
+        //#endif
     }
+
+    //#if MC < 12106
+    //$$ @SuppressWarnings("deprecation")
+    //$$ private void registerLegacyHud() {
+    //$$     HudRenderCallback.EVENT.register((ctx, tickCounter) -> renderUnreadBadge(ctx, tickCounter));
+    //$$ }
+    //#endif
 
     //#if MC >= 260100
     private void renderUnreadBadge(GuiGraphicsExtractor ctx, DeltaTracker tickCounter) {
@@ -157,9 +216,15 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
             int panelX = baseX;
             int panelY = baseY - Math.round((panelH + 2) * scale);
 
+            //#if MC >= 12106
             ctx.pose().pushMatrix();
             ctx.pose().translate(panelX, panelY);
             ctx.pose().scale(scale, scale);
+            //#else
+            //$$ ctx.pose().pushPose();
+            //$$ ctx.pose().translate(panelX, panelY, 0);
+            //$$ ctx.pose().scale(scale, scale, 1f);
+            //#endif
             ctx.fill(-2, -2, panelW + 2, panelH + 2, 0xE0101010);
             ctx.fill(-1, -1, panelW + 1, panelH + 1, 0xE0222222);
 
@@ -183,18 +248,32 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
                 );
                 ly += rowH;
             }
+            //#if MC >= 12106
             ctx.pose().popMatrix();
+            //#else
+            //$$ ctx.pose().popPose();
+            //#endif
         }
 
+        //#if MC >= 12106
         ctx.pose().pushMatrix();
         ctx.pose().translate(baseX, baseY);
         ctx.pose().scale(scale, scale);
+        //#else
+        //$$ ctx.pose().pushPose();
+        //$$ ctx.pose().translate(baseX, baseY, 0);
+        //$$ ctx.pose().scale(scale, scale, 1f);
+        //#endif
         ctx.fill(-3, -2, badgeW + 3, 10, 0x90000000);
         //#if MC >= 260100
         ctx.text(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
         //#else
         //$$ ctx.drawString(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
         //#endif
+        //#if MC >= 12106
         ctx.pose().popMatrix();
+        //#else
+        //$$ ctx.pose().popPose();
+        //#endif
     }
 }
