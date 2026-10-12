@@ -4,12 +4,20 @@ import com.example.tibiachat.TibiaChatTabsClient;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#else
+//$$ import net.minecraft.client.gui.GuiGraphics;
+//#endif
 
 public final class PrivateChatRenderer {
     private PrivateChatRenderer() {}
 
-    public static boolean draw(GuiGraphics graphics, Font font, boolean focused) {
+    //#if MC >= 260100
+    public static boolean draw(GuiGraphicsExtractor graphics, Font font, boolean focused) {
+    //#else
+    //$$ public static boolean draw(GuiGraphics graphics, Font font, boolean focused) {
+    //#endif
         if (!TibiaChatTabsClient.CHAT.viewingPrivate()) {
             return false;
         }
@@ -49,7 +57,11 @@ public final class PrivateChatRenderer {
             ChatMessage msg = messages.get(i);
             int drawY = baseY - (y + 1) * lineHeight;
             graphics.fill(2, drawY - 1, 2 + chatWidth, drawY + lineHeight - 1, 0x80000000);
-            graphics.drawString(drawFont, msg.component(), 4, drawY, 0xFFFFFF, true);
+            //#if MC >= 260100
+            graphics.text(drawFont, msg.component(), 4, drawY, 0xFFFFFF, true);
+            //#else
+            //$$ graphics.drawString(drawFont, msg.component(), 4, drawY, 0xFFFFFF, true);
+            //#endif
             y++;
         }
         return true;

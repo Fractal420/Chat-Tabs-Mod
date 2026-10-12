@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "chat_tabs",
+  "id": "${mod_id}",
   "version": "${version}",
-  "name": "Chat Tabs",
+  "name": "${mod_name}",
   "icon": "assets/chat_tabs/icon.png",
-  "description": "Client-side Fabric chat tabs with private conversations. Made for 6b6t Anarchy Server",
+  "description": "${mod_description}",
   "environment": "client",
   "entrypoints": {
     "client": ["com.example.tibiachat.TibiaChatTabsClient"],
@@ -13,11 +13,16 @@
   "mixins": ["tibia_chat_tabs.mixins.json"],
   "depends": {
     "fabricloader": ">=0.17.0",
-    "minecraft": "~${minecraft_version}",
+    "minecraft": "${minecraft_dependency}",
     "java": ">=21",
     "fabric-api": "*"
   },
   "suggests": {
     "modmenu": "*"
-  }
+  },
+  "contact": {
+    "homepage": "${mod_homepage}",
+    "sources": "${mod_sources}"
+  },
+  "license": "${mod_license}"
 }

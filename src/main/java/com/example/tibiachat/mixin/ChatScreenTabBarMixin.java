@@ -6,7 +6,11 @@ import com.example.tibiachat.chat.ConversationManager;
 import com.example.tibiachat.hud.HudLayout;
 import com.example.tibiachat.gui.TibiaChatConfigScreen;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#else
+//$$ import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
@@ -55,7 +59,11 @@ public abstract class ChatScreenTabBarMixin {
 
     @Inject(method = "render", at = @At("TAIL"))
     private void tibiaChatTabs$drawTabs(
-            GuiGraphics ctx,
+            //#if MC >= 260100
+            GuiGraphicsExtractor ctx,
+            //#else
+            //$$ GuiGraphics ctx,
+            //#endif
             int mouseX,
             int mouseY,
             float delta,
@@ -160,12 +168,20 @@ public abstract class ChatScreenTabBarMixin {
 
         if (tibiaChatTabs$tabScroll > 0) {
             ctx.fill(tabsLeft, top, tabsLeft + 8, bottom, 0xCC101010);
-            ctx.drawString(mc.font, Component.literal("‹"), tabsLeft + 1, top + 3, 0xFFFFFFFF, true);
+            //#if MC >= 260100
+            ctx.text(mc.font, Component.literal("‹"), tabsLeft + 1, top + 3, 0xFFFFFFFF, true);
+            //#else
+            //$$ ctx.drawString(mc.font, Component.literal("‹"), tabsLeft + 1, top + 3, 0xFFFFFFFF, true);
+            //#endif
         }
 
         if (tibiaChatTabs$tabScroll < maxScroll) {
             ctx.fill(tabsRight - 8, top, tabsRight, bottom, 0xCC101010);
-            ctx.drawString(mc.font, Component.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF, true);
+            //#if MC >= 260100
+            ctx.text(mc.font, Component.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF, true);
+            //#else
+            //$$ ctx.drawString(mc.font, Component.literal("›"), tabsRight - 6, top + 3, 0xFFFFFFFF, true);
+            //#endif
         }
 
         int sbX = HudLayout.settingsBtnX(screenW);
@@ -174,7 +190,11 @@ public abstract class ChatScreenTabBarMixin {
         int sbH = HudLayout.settingsBtnH();
         boolean sbHover = mouseX >= sbX && mouseX < sbX + sbW && mouseY >= sbY && mouseY < sbY + sbH;
         ctx.fill(sbX, sbY, sbX + sbW, sbY + sbH, sbHover ? 0xFF3A6EA5 : 0xCC202020);
-        ctx.drawString(mc.font, Component.literal("⚙"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
+        //#if MC >= 260100
+        ctx.text(mc.font, Component.literal("⚙"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
+        //#else
+        //$$ ctx.drawString(mc.font, Component.literal("⚙"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
+        //#endif
 
         long remainingMs = TibiaChatTabsClient.CHAT.privateCooldownRemainingMs();
         if (TibiaChatTabsClient.CHAT.viewingPrivate() && remainingMs > 0) {
@@ -184,13 +204,21 @@ public abstract class ChatScreenTabBarMixin {
             int lx = 4;
             int ly = screenH - 28;
             ctx.fill(lx - 2, ly - 2, lx + labelW + 2, ly + 10, 0xC0000000);
-            ctx.drawString(mc.font, Component.literal(label), lx, ly, 0xFFFF6B6B, true);
+            //#if MC >= 260100
+            ctx.text(mc.font, Component.literal(label), lx, ly, 0xFFFF6B6B, true);
+            //#else
+            //$$ ctx.drawString(mc.font, Component.literal(label), lx, ly, 0xFFFF6B6B, true);
+            //#endif
         }
 
         tibiaChatTabs$drawUnreadPanel(ctx, mc, screenH);
     }
 
-    private void tibiaChatTabs$drawUnreadPanel(GuiGraphics ctx, Minecraft mc, int screenH) {
+    //#if MC >= 260100
+    private void tibiaChatTabs$drawUnreadPanel(GuiGraphicsExtractor ctx, Minecraft mc, int screenH) {
+    //#else
+    //$$ private void tibiaChatTabs$drawUnreadPanel(GuiGraphics ctx, Minecraft mc, int screenH) {
+    //#endif
         int unread = TibiaChatTabsClient.CHAT.totalUnread();
         com.example.tibiachat.hud.UnreadNotifier.clearEntries();
         if (unread <= 0) {
@@ -237,7 +265,11 @@ public abstract class ChatScreenTabBarMixin {
             for (com.example.tibiachat.chat.Conversation c : list) {
                 String line = c.playerName() + "  " + c.unread();
                 ctx.fill(0, ly - 1, panelW, ly + rowH - 2, 0xFF3A6EA5);
-                ctx.drawString(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                //#if MC >= 260100
+                ctx.text(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                //#else
+                //$$ ctx.drawString(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                //#endif
                 int absY0 = panelY + Math.round(ly * scale);
                 int absY1 = panelY + Math.round((ly + rowH) * scale);
                 com.example.tibiachat.hud.UnreadNotifier.addEntry(
@@ -257,7 +289,11 @@ public abstract class ChatScreenTabBarMixin {
         ctx.pose().scale(scale, scale);
         ctx.fill(-3, -2, badgeW + 3, 10, 0xFF000000);
         ctx.fill(-2, -1, badgeW + 2, 9, 0xFF303030);
-        ctx.drawString(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
+        //#if MC >= 260100
+        ctx.text(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
+        //#else
+        //$$ ctx.drawString(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
+        //#endif
         ctx.pose().popMatrix();
     }
 
@@ -286,7 +322,11 @@ public abstract class ChatScreenTabBarMixin {
     }
 
     private int tibiaChatTabs$drawTab(
-            GuiGraphics ctx,
+            //#if MC >= 260100
+            GuiGraphicsExtractor ctx,
+            //#else
+            //$$ GuiGraphics ctx,
+            //#endif
             Minecraft mc,
             String label,
             String key,
@@ -332,7 +372,8 @@ public abstract class ChatScreenTabBarMixin {
         ctx.pose().translate(x + Math.round(5 * textScale), top + 4);
         ctx.pose().scale(textScale, textScale);
 
-        ctx.drawString(
+        //#if MC >= 260100
+        ctx.text(
                 mc.font,
                 Component.literal(shown),
                 0,
@@ -340,6 +381,16 @@ public abstract class ChatScreenTabBarMixin {
                 unread > 0 ? 0xFFFFD24A : 0xFFFFFFFF,
                 true
         );
+        //#else
+        //$$ ctx.drawString(
+        //$$ mc.font,
+        //$$ Component.literal(shown),
+        //$$ 0,
+        //$$ 0,
+        //$$ unread > 0 ? 0xFFFFD24A : 0xFFFFFFFF,
+        //$$ true
+        //$$ );
+        //#endif
 
         ctx.pose().popMatrix();
 
@@ -347,7 +398,8 @@ public abstract class ChatScreenTabBarMixin {
             int closeX = x + w - Math.round((CLOSE_SIZE + 2) * textScale);
             int closeY = top + 4;
 
-            ctx.drawString(
+            //#if MC >= 260100
+            ctx.text(
                     mc.font,
                     Component.literal("×"),
                     closeX,
@@ -355,6 +407,16 @@ public abstract class ChatScreenTabBarMixin {
                     0xFFFFFFFF,
                     true
             );
+            //#else
+            //$$ ctx.drawString(
+            //$$ mc.font,
+            //$$ Component.literal("×"),
+            //$$ closeX,
+            //$$ closeY - 1,
+            //$$ 0xFFFFFFFF,
+            //$$ true
+            //$$ );
+            //#endif
         }
 
         return x + w;
@@ -471,7 +533,11 @@ public abstract class ChatScreenTabBarMixin {
         int sbW = HudLayout.settingsBtnW();
         int sbH = HudLayout.settingsBtnH();
         if (click.x() >= sbX && click.x() < sbX + sbW && click.y() >= sbY && click.y() < sbY + sbH) {
-            mc.setScreen(new TibiaChatConfigScreen((ChatScreen) (Object) this));
+            //#if MC >= 260200
+            mc.gui.setScreen(new TibiaChatConfigScreen((ChatScreen) (Object) this));
+            //#else
+            //$$ mc.setScreen(new TibiaChatConfigScreen((ChatScreen) (Object) this));
+            //#endif
             cir.setReturnValue(true);
             return;
         }

@@ -7,7 +7,11 @@ import com.example.tibiachat.chat.SentMessageHistory;
 import com.example.tibiachat.config.TibiaChatConfig;
 import java.util.Locale;
 import java.util.function.DoubleConsumer;
-import net.minecraft.client.gui.GuiGraphics;
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#else
+//$$ import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -194,13 +198,21 @@ public class TibiaChatConfigScreen extends Screen {
 
     private void openHudEdit() {
         if (this.minecraft != null) {
-            this.minecraft.setScreen(new HudEditScreen(this));
+            //#if MC >= 260200
+            this.minecraft.gui.setScreen(new HudEditScreen(this));
+            //#else
+            //$$ this.minecraft.setScreen(new HudEditScreen(this));
+            //#endif
         }
     }
 
     private void openDetection() {
         if (this.minecraft != null) {
-            this.minecraft.setScreen(new ChatRegexConfigScreen(this));
+            //#if MC >= 260200
+            this.minecraft.gui.setScreen(new ChatRegexConfigScreen(this));
+            //#else
+            //$$ this.minecraft.setScreen(new ChatRegexConfigScreen(this));
+            //#endif
         }
     }
 
@@ -235,16 +247,32 @@ public class TibiaChatConfigScreen extends Screen {
 
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredString(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
+    //#if MC >= 260100
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+    //#else
+    //$$ public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    //#endif
+        //#if MC >= 260100
+        super.extractRenderState(context, mouseX, mouseY, delta);
+//#else
+//$$         super.render(context, mouseX, mouseY, delta);
+//#endif
+        //#if MC >= 260100
+        context.text(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
+        //#else
+        //$$ context.drawString(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
+        //#endif
     }
 
     @Override
     public void onClose() {
         config.save();
         if (this.minecraft != null) {
-            this.minecraft.setScreen(parent);
+            //#if MC >= 260200
+            this.minecraft.gui.setScreen(parent);
+            //#else
+            //$$ this.minecraft.setScreen(parent);
+            //#endif
         }
     }
 

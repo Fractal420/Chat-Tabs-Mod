@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_wrapper_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name} (Multi-Version Pack)",
+  "description": "${mod_description}",
+  "authors": ["Chat Tabs Contributors"],
+  "contact": {
+    "homepage": "${mod_homepage}",
+    "issues": "${mod_sources}/issues",
+    "sources": "${mod_sources}"
+  },
+  "license": "${mod_license}",
+  "environment": "client",
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "*",
+    "fabric-api": "*"
+  }
+}

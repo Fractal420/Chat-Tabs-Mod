@@ -182,7 +182,11 @@ public final class ChatManager {
                 try {
                     ChatComponent chat = chat();
                     if (chat != null) {
-                        chat.addMessage(message);
+                        //#if MC >= 260100
+                        chat.addClientSystemMessage(message);
+                        //#else
+                        //$$ chat.addMessage(message);
+                        //#endif
                         ChatHudBuffer.capturePrivate(selectedKey);
                     }
                 } finally {
@@ -259,7 +263,11 @@ public final class ChatManager {
             int limit = config.chatHistoryLimit();
             int start = Math.max(0, main.size() - limit);
             for (int i = start; i < main.size(); i++) {
-                chat.addMessage(main.get(i).component());
+                //#if MC >= 260100
+                chat.addClientSystemMessage(main.get(i).component());
+                //#else
+                //$$ chat.addMessage(main.get(i).component());
+                //#endif
             }
         } finally {
             writingHud = false;
@@ -282,7 +290,11 @@ public final class ChatManager {
             int limit = config.chatHistoryLimit();
             int start = Math.max(0, msgs.size() - limit);
             for (int i = start; i < msgs.size(); i++) {
-                chat.addMessage(msgs.get(i).component());
+                //#if MC >= 260100
+                chat.addClientSystemMessage(msgs.get(i).component());
+                //#else
+                //$$ chat.addMessage(msgs.get(i).component());
+                //#endif
             }
             ChatHudBuffer.capturePrivate(selectedKey);
         } finally {
@@ -295,7 +307,11 @@ public final class ChatManager {
         if (mc == null || mc.gui == null) {
             return null;
         }
-        return mc.gui.getChat();
+        //#if MC >= 260200
+        return mc.gui.hud.getChat();
+        //#else
+        //$$ return mc.gui.getChat();
+        //#endif
     }
 
     public void trimMain() {
@@ -376,7 +392,15 @@ public final class ChatManager {
     public void tick() {
         ChatPersistence.tick();
         Minecraft mc = Minecraft.getInstance();
-        if (mc != null && (mc.screen == null || !(mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen))) {
+        if (mc == null) {
+            return;
+        }
+        //#if MC >= 260200
+        var screen = mc.gui != null ? mc.gui.screen() : null;
+        if (screen == null || !(screen instanceof net.minecraft.client.gui.screens.ChatScreen)) {
+        //#else
+        //$$ if (mc.screen == null || !(mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen)) {
+        //#endif
             if (!ConversationManager.MAIN.equals(selectedKey)) {
                 selectedKey = ConversationManager.MAIN;
                 ChatHudBuffer.restoreMain();

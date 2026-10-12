@@ -84,7 +84,11 @@ public final class SentMessageHistory {
         if (!loaded) load();
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.gui == null) return;
-        ChatComponent chat = mc.gui.getChat();
+        //#if MC >= 260200
+        ChatComponent chat = mc.gui.hud.getChat();
+        //#else
+        //$$ ChatComponent chat = mc.gui.getChat();
+        //#endif
         if (chat == null) return;
         var recent = chat.getRecentChat();
         if (recent == null) return;

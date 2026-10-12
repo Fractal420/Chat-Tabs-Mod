@@ -1,0 +1,77 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_release_tag:
+        description: Existing or new GitHub release tag
+        type: string
+        required: true
+      prerelease:
+        description: Mark as pre-release
+        type: boolean
+        default: true
+
+env:
+  IS_THIS_RELEASE: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  GRADLE_OPTS: --sun-misc-unsafe-memory-access=allow
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.target_release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ./.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build all versions and wrapper
+        run: ./gradlew :fabricWrapper:build --stacktrace --console=plain
+
+      - name: Collect release jars
+        shell: bash
+        run: |
+          rm -rf release-artifacts
+          mkdir -p release-artifacts/version-jars
+          find fabricWrapper/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-sources.jar" -exec cp {} release-artifacts/ \; || true
+          find versions -path "*/build/libs/*.jar" ! -name "*-sources.jar" -exec cp {} release-artifacts/version-jars/ \; || true
+          find release-artifacts -type f -name "*.jar" -print | sort
+
+      - name: Upload jars to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.target_release_tag }}
+          files: release-artifacts/**/*.jar
+          generate_release_notes: true
+          prerelease: ${{ inputs.prerelease }}
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

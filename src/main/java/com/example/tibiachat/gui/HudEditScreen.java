@@ -3,7 +3,11 @@ package com.example.tibiachat.gui;
 import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.config.TibiaChatConfig;
 import com.example.tibiachat.hud.HudLayout;
-import net.minecraft.client.gui.GuiGraphics;
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#else
+//$$ import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -35,7 +39,11 @@ public class HudEditScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    //#if MC >= 260100
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+    //#else
+    //$$ public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    //#endif
         context.fill(0, 0, this.width, this.height, 0x60000000);
 
         int barLeft = HudLayout.tabBarLeft();
@@ -52,11 +60,19 @@ public class HudEditScreen extends Screen {
         int tabRgb = config.tabColor();
         int mainW = Math.round(50 * HudLayout.tabTextScale());
         context.fill(barLeft + 2, barTop + 2, barLeft + 2 + mainW, barBottom - 2, (tabAlpha << 24) | tabRgb);
-        context.drawCenteredString(this.font, "Main", barLeft + 2 + mainW / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+        //#if MC >= 260100
+        context.text(this.font, "Main", barLeft + 2 + mainW / 2 - this.font.width("Main") / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+        //#else
+        //$$ context.drawString(this.font, "Main", barLeft + 2 + mainW / 2 - this.font.width("Main") / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+        //#endif
 
         int tabW = Math.round(70 * HudLayout.tabTextScale());
         context.fill(barLeft + 4 + mainW, barTop + 2, barLeft + 4 + mainW + tabW, barBottom - 2, (tabAlpha << 24) | tabRgb);
-        context.drawCenteredString(this.font, "Sample", barLeft + 4 + mainW + tabW / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+        //#if MC >= 260100
+        context.text(this.font, "Sample", barLeft + 4 + mainW + tabW / 2 - this.font.width("Sample") / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+        //#else
+        //$$ context.drawString(this.font, "Sample", barLeft + 4 + mainW + tabW / 2 - this.font.width("Sample") / 2, barTop + (barBottom - barTop) / 2 - 4, 0xFFFFFFFF);
+        //#endif
 
         String sample = "\u2709 3";
         int textW = this.font.width(sample);
@@ -69,7 +85,11 @@ public class HudEditScreen extends Screen {
         context.pose().pushMatrix();
         context.pose().translate(iconX, iconY);
         context.pose().scale(iconScale, iconScale);
-        context.drawString(this.font, Component.literal(sample), 0, 0, 0xFFFFD24A, true);
+        //#if MC >= 260100
+        context.text(this.font, Component.literal(sample), 0, 0, 0xFFFFD24A, true);
+        //#else
+        //$$ context.drawString(this.font, Component.literal(sample), 0, 0, 0xFFFFD24A, true);
+        //#endif
         context.pose().popMatrix();
 
         int sbX = HudLayout.settingsBtnX(this.width);
@@ -77,13 +97,24 @@ public class HudEditScreen extends Screen {
         int sbW = HudLayout.settingsBtnW();
         int sbH = HudLayout.settingsBtnH();
         context.fill(sbX, sbY, sbX + sbW, sbY + sbH, 0xFF3A6EA5);
-        context.drawString(this.font, Component.literal("\u2699"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
+        //#if MC >= 260100
+        context.text(this.font, Component.literal("\u2699"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
+        //#else
+        //$$ context.drawString(this.font, Component.literal("\u2699"), sbX + 3, sbY + 3, 0xFFFFFFFF, true);
+        //#endif
 
-        context.drawCenteredString(this.font,
-                Component.literal("Drag tab bar / notif icon / settings button. Blue edge resizes tab bar."),
-                this.width / 2, 12, 0xFFFFFFFF);
+        String hint = "Drag tab bar / notif icon / settings button. Blue edge resizes tab bar.";
+        //#if MC >= 260100
+        context.text(this.font, hint, this.width / 2 - this.font.width(hint) / 2, 12, 0xFFFFFFFF);
+        //#else
+        //$$ context.drawString(this.font, hint, this.width / 2 - this.font.width(hint) / 2, 12, 0xFFFFFFFF);
+        //#endif
 
-        super.render(context, mouseX, mouseY, delta);
+        //#if MC >= 260100
+        super.extractRenderState(context, mouseX, mouseY, delta);
+//#else
+//$$         super.render(context, mouseX, mouseY, delta);
+//#endif
     }
 
     private boolean withinResizeHandle(double x, double y) {
@@ -207,7 +238,11 @@ public class HudEditScreen extends Screen {
     public void onClose() {
         config.save();
         if (this.minecraft != null) {
-            this.minecraft.setScreen(parent);
+            //#if MC >= 260200
+            this.minecraft.gui.setScreen(parent);
+            //#else
+            //$$ this.minecraft.setScreen(parent);
+            //#endif
         }
     }
 }

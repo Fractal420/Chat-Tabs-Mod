@@ -5,7 +5,11 @@ import com.example.tibiachat.config.TibiaChatConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import net.minecraft.client.gui.GuiGraphics;
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#else
+//$$ import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -226,22 +230,54 @@ public class ChatRegexConfigScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredString(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
+    //#if MC >= 260100
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+    //#else
+    //$$ public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    //#endif
+        //#if MC >= 260100
+        super.extractRenderState(context, mouseX, mouseY, delta);
+//#else
+//$$         super.render(context, mouseX, mouseY, delta);
+//#endif
+        //#if MC >= 260100
+        context.text(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
+        //#else
+        //$$ context.drawString(this.font, this.title, this.width / 2, 8, 0xFFFFFFFF);
+        //#endif
 
         int y = TOP;
-        context.drawString(this.font, "Whisper cmd:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#if MC >= 260100
+        context.text(this.font, "Whisper cmd:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#else
+        //$$ context.drawString(this.font, "Whisper cmd:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#endif
         y += ROW + GAP;
-        context.drawString(this.font, "Aliases:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#if MC >= 260100
+        context.text(this.font, "Aliases:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#else
+        //$$ context.drawString(this.font, "Aliases:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#endif
         y += ROW + GAP + 4;
         y += (ROW + GAP) * 4;
-        context.drawString(this.font, "Player name:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#if MC >= 260100
+        context.text(this.font, "Player name:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#else
+        //$$ context.drawString(this.font, "Player name:", leftX, y + 5, 0xFFFFFFFF, true);
+        //#endif
 
-        context.drawString(this.font, "Formats  ({player}  {message})", rightX, listTop - 12, 0xFFAAAAAA, true);
+        //#if MC >= 260100
+        context.text(this.font, "Formats  ({player}  {message})", rightX, listTop - 12, 0xFFAAAAAA, true);
+        //#else
+        //$$ context.drawString(this.font, "Formats  ({player}  {message})", rightX, listTop - 12, 0xFFAAAAAA, true);
+        //#endif
 
         if (workingFormats.isEmpty()) {
-            context.drawString(this.font, "No formats yet", rightX, listTop + 4, 0xFFAAAAAA, true);
+            //#if MC >= 260100
+            context.text(this.font, "No formats yet", rightX, listTop + 4, 0xFFAAAAAA, true);
+            //#else
+            //$$ context.drawString(this.font, "No formats yet", rightX, listTop + 4, 0xFFAAAAAA, true);
+            //#endif
         }
     }
 
@@ -249,7 +285,11 @@ public class ChatRegexConfigScreen extends Screen {
     public void onClose() {
         config.save();
         if (this.minecraft != null) {
-            this.minecraft.setScreen(parent);
+            //#if MC >= 260200
+            this.minecraft.gui.setScreen(parent);
+            //#else
+            //$$ this.minecraft.setScreen(parent);
+            //#endif
         }
     }
 }

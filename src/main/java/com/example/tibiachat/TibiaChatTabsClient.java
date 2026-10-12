@@ -12,7 +12,11 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+//#if MC >= 260100
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+//#else
+//$$ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+//#endif
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -21,7 +25,11 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#else
+//$$ import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
@@ -38,7 +46,11 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        //#if MC >= 260100
+        openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+//#else
+//$$         openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+//#endif
                 "key.chat_tabs.open_settings",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_UNKNOWN,
@@ -84,9 +96,15 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
             CHAT.tick();
 
             while (openSettingsKey.consumeClick()) {
-                if (client.screen == null) {
-                    client.setScreen(new TibiaChatConfigScreen(null));
+                //#if MC >= 260200
+                if (client.gui.screen() == null) {
+                    client.gui.setScreen(new TibiaChatConfigScreen(null));
                 }
+                //#else
+                //$$ if (client.screen == null) {
+                //$$     client.setScreen(new TibiaChatConfigScreen(null));
+                //$$ }
+                //#endif
             }
         });
 
@@ -97,7 +115,11 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
         );
     }
 
-    private void renderUnreadBadge(GuiGraphics ctx, DeltaTracker tickCounter) {
+    //#if MC >= 260100
+    private void renderUnreadBadge(GuiGraphicsExtractor ctx, DeltaTracker tickCounter) {
+//#else
+//$$     private void renderUnreadBadge(GuiGraphics ctx, DeltaTracker tickCounter) {
+//#endif
         int unread = CHAT.totalUnread();
         UnreadNotifier.clearEntries();
 
@@ -145,7 +167,11 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
             for (Conversation c : list) {
                 String line = c.playerName() + "  " + c.unread();
                 ctx.fill(0, ly - 1, panelW, ly + rowH - 2, 0x803A6EA5);
-                ctx.drawString(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                //#if MC >= 260100
+                ctx.text(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                //#else
+                //$$ ctx.drawString(mc.font, Component.literal(line), 4, ly, 0xFFFFD24A, true);
+                //#endif
                 int absY0 = panelY + Math.round(ly * scale);
                 int absY1 = panelY + Math.round((ly + rowH) * scale);
                 UnreadNotifier.addEntry(
@@ -164,7 +190,11 @@ public final class TibiaChatTabsClient implements ClientModInitializer {
         ctx.pose().translate(baseX, baseY);
         ctx.pose().scale(scale, scale);
         ctx.fill(-3, -2, badgeW + 3, 10, 0x90000000);
-        ctx.drawString(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
+        //#if MC >= 260100
+        ctx.text(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
+        //#else
+        //$$ ctx.drawString(mc.font, Component.literal(badge), 0, 0, 0xFFFFD24A, true);
+        //#endif
         ctx.pose().popMatrix();
     }
 }

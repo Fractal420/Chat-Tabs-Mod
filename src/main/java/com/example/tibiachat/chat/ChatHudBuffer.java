@@ -53,7 +53,11 @@ public final class ChatHudBuffer {
                 chat.clearMessages(false);
             }
             for (Component pending : pendingMain) {
-                chat.addMessage(pending);
+                //#if MC >= 260100
+                chat.addClientSystemMessage(pending);
+                //#else
+                //$$ chat.addMessage(pending);
+                //#endif
             }
             pendingMain.clear();
             mainAllSnapshot = null;
@@ -123,7 +127,11 @@ public final class ChatHudBuffer {
         if (mc == null || mc.gui == null) {
             return null;
         }
-        return mc.gui.getChat();
+        //#if MC >= 260200
+        return mc.gui.hud.getChat();
+        //#else
+        //$$ return mc.gui.getChat();
+        //#endif
     }
 
     public interface Access {

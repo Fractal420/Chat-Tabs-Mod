@@ -82,6 +82,16 @@ public abstract class ChatComponentMixin implements ChatHudBuffer.Access {
         }
     }
 
+    //#if MC >= 260100
+    @Inject(method = "addClientSystemMessage", at = @At("HEAD"), cancellable = true, require = 0)
+    private void tibiaChatTabs$gateSystem(Component message, CallbackInfo ci) {
+        tibiaChatTabs$observe(message);
+        if (!TibiaChatTabsClient.CHAT.shouldAcceptHudMessage(message)) {
+            ci.cancel();
+        }
+    }
+    //#endif
+
 
     @Unique
     private static void tibiaChatTabs$observe(Component message) {

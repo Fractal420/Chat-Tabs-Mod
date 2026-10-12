@@ -4,7 +4,11 @@ import com.example.tibiachat.TibiaChatTabsClient;
 import com.example.tibiachat.config.TibiaChatConfig;
 import java.util.Locale;
 import java.util.function.IntConsumer;
-import net.minecraft.client.gui.GuiGraphics;
+//#if MC >= 260100
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//#else
+//$$ import net.minecraft.client.gui.GuiGraphics;
+//#endif
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -123,11 +127,27 @@ public class ChatAppearanceConfigScreen extends Screen {
     private record HexLabel(String text, int x, int y) {}
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
+    //#if MC >= 260100
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+    //#else
+    //$$ public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    //#endif
+        //#if MC >= 260100
+        super.extractRenderState(context, mouseX, mouseY, delta);
+//#else
+//$$         super.render(context, mouseX, mouseY, delta);
+//#endif
+        //#if MC >= 260100
+        context.text(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
+        //#else
+        //$$ context.drawString(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
+        //#endif
         for (HexLabel h : hexLabels) {
-            context.drawString(this.font, h.text(), h.x(), h.y() + 6, 0xFFFFFFFF, true);
+            //#if MC >= 260100
+            context.text(this.font, h.text(), h.x(), h.y() + 6, 0xFFFFFFFF, true);
+            //#else
+            //$$ context.drawString(this.font, h.text(), h.x(), h.y() + 6, 0xFFFFFFFF, true);
+            //#endif
         }
     }
 
@@ -135,7 +155,11 @@ public class ChatAppearanceConfigScreen extends Screen {
     public void onClose() {
         config.save();
         if (this.minecraft != null) {
-            this.minecraft.setScreen(parent);
+            //#if MC >= 260200
+            this.minecraft.gui.setScreen(parent);
+            //#else
+            //$$ this.minecraft.setScreen(parent);
+            //#endif
         }
     }
 }
