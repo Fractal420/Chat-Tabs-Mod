@@ -5,9 +5,7 @@ A client-side Fabric mod for Minecraft that adds **Tibia-style chat tabs** to th
 Built with **6b6t** (an anarchy server) in mind, where whisper spam can bury conversations, but the whisper detection is fully configurable (simple format strings with `{player}` / `{message}`), so it can be adapted to other servers' chat formats.
 
 
-
-https://github.com/user-attachments/assets/2c4f6ce1-62e8-49a8-9818-2671f331206b
-
+https://github.com/user-attachments/assets/ef61f078-d4d0-4f19-82fa-9a6e372ce584
 
 
 ## Why
