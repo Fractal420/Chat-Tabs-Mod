@@ -2,7 +2,7 @@
 
 A client-side Fabric mod for Minecraft that adds **Tibia-style chat tabs** to the vanilla chat screen, so private messages get their own tab instead of scrolling by in the main chat feed.
 
-Built with **6b6t** (an anarchy server) in mind, where whisper spam can bury conversations, but the whisper detection is regex-based and fully configurable, so it can be adapted to other servers' chat formats.
+Built with **6b6t** (an anarchy server) in mind, where whisper spam can bury conversations, but the whisper detection is fully configurable (simple format strings with `{player}` / `{message}`), so it can be adapted to other servers' chat formats.
 
 
 
@@ -19,12 +19,15 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 ### Core chat tabs
 - **Automatic private-message tabs** — incoming and outgoing whispers are detected from chat text and grouped into a per-player conversation tab.
 - **Main tab** — all messages (public, system, and a copy of every whisper) still flow into a "Main" tab, so nothing is ever hidden, just organized.
+- **Dedicated private-tab rendering** — private conversations are buffered and rendered separately from the main chat HUD, so switching tabs stays smooth even with long histories.
 - **Unread indicators** — each tab shows an unread count; unread tab labels are highlighted. A small badge (✉) is drawn on the HUD outside of the chat screen showing your total unread whispers.
+- **Click-to-expand unread badge** — click the ✉ badge to expand a list of unread conversations; click a name to open that tab directly.
 - **Scrollable tab bar** — tabs overflow into a horizontally scrollable strip (mouse wheel over the bar) with `‹` / `›` indicators when there's more than fits on screen. The selected tab is auto-scrolled into view.
 - **Click to switch, click × to close** — hover a tab to reveal its close button; closing the active tab falls back to the next open one (or Main).
 - **Drag to reorder** — click and drag a conversation tab to rearrange the order of your tabs.
 - **Reply from a tab** — while a whisper tab is open, pressing Enter in the chat box automatically sends your message as a whisper to that tab's player, using your configured whisper command. You don't need to type `/w <name>` yourself.
 - **Slash commands still work** — if you type a command starting with `/` while a private tab is selected, it is sent as a normal command (not wrapped in a whisper), so things like `/tpa` keep working.
+- **Whisper cooldown** — optional delay (0–60 s, default 3 s) between private sends to reduce accidental spam; remaining time is shown while a private tab is active.
 - **Outgoing/incoming echo de-duplication** — a fingerprinting system matches your sent whispers against the server's own echo/confirmation line so messages aren't duplicated in the tab.
 
 ### Appearance & HUD
@@ -33,11 +36,12 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 - **Scalable tab bar** — resize the whole tab strip (and its text) with a scale slider.
 - **Reposition & resize HUD** — open the HUD editor to drag the tab bar, the unread notification badge, and the settings button. Drag the blue edge of the tab bar to change its width.
 - **Settings button on the tab bar** — a ⚙ button sits on the right of the tab strip for quick access to options while chat is open.
+- **Sound notifications** — play a configurable sound on incoming whispers (Pling, Bell, Chime, Xylophone, Cow Bell, Bit, Amethyst, XP Orb, Level Up, Challenge). Volume and on/off are adjustable in settings.
 
 ### Configuration
-- **In-game settings GUI** — open via the ⚙ button on the tab bar, Mod Menu, or a configurable keybind ("Open Chat Tabs Settings").
+- **In-game settings GUI** — open via the ⚙ button on the tab bar, Mod Menu, or a configurable keybind ("Open Chat Tabs Settings"). Settings are organized into **Appearance**, **Persistence**, and **Private** tabs.
 - **In-game PM detection editor** — change the whisper command, aliases, and whisper formats and detection options from the settings screens.
-- **Persistent sent messages** — optional toggle to keep the chat input history (Up/Down arrow recall) across disconnects, relogs, and full game restarts. Includes a slider for how many recent lines to remember (1–1000). History is stored in `config/tibia_chat_tabs_sent_history.json`.
+- **Persistent sent messages** — optional toggle to keep the chat input history (Up/Down arrow recall) across disconnects, relogs, and full game restarts. Includes a slider for how many recent lines to remember (1–1000, default 100). History is stored in `config/tibia_chat_tabs_sent_history.json`.
 - **Persistent chat log** — optional toggle to restore the Main tab chat history after a restart or relog, with a slider for how many messages to keep (10–100000, default 1000). Full component JSON is stored so player heads and formatting are restored. Detection uses normalized component text (head placeholders stripped) so whisper matching is more stable across server format changes.
 - **Persistent tabs** — optional toggle to keep private conversation tabs and their messages across restarts and relogs. Tab history uses the same size limit as the chat log.
 - Chat and tab history are stored in `config/tibia_chat_tabs_history.json`.
@@ -55,11 +59,16 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 
 ## Supported Minecraft versions
 
-| Minecraft | Notes  |
-|-----------|--------|
-| 1.21.11   | Fabric |
-| 26.1      | Fabric |
-| 26.2      | Fabric |
+| Minecraft     | Notes  |
+|---------------|--------|
+| 1.21.1        | Fabric |
+| 1.21.3–1.21.6 | Fabric |
+| 1.21.8        | Fabric |
+| 1.21.9        | Fabric |
+| 1.21.11       | Fabric |
+| 26.1          | Fabric |
+| 26.2          | Fabric |
+| 26.3          | Fabric |
 
 ## How to use
 
@@ -68,7 +77,8 @@ Old-school MMORPGs like **Tibia** kept private messages in separate tabs next to
 3. Whisper someone or wait for someone to whisper you — a tab for that player appears on the tab bar.
 4. Click a tab to switch; the chat log is filtered to that conversation and its unread count is cleared.
 5. Type a message and press Enter while a whisper tab is selected to reply as a whisper automatically.
-6. Use the ⚙ button on the tab bar (or Mod Menu / keybind) to open settings: themes, sizes, HUD layout, and Message Detection settings.
+6. Use the ⚙ button on the tab bar (or Mod Menu / keybind) to open settings: themes, sizes, HUD layout, notifications, cooldown, and Message Detection settings.
+7. Click the ✉ unread badge on the HUD to expand the list of unread conversations and jump straight to one.
 
 Because the tab bar is rendered on top of the vanilla `ChatScreen`, tabs are only visible while the chat window is open. The unread-count badge on the main HUD lets you know a new whisper arrived even while the chat screen is closed.
 
@@ -99,12 +109,13 @@ Outgoing echo is also detected automatically. Open **Message Detection** in the 
 ./gradlew buildAll
 ```
 
-Or build a single target:
+Or build a single target (examples):
 
 ```bash
 ./gradlew :1.21.11:build
 ./gradlew :26.1:build
 ./gradlew :26.2:build
+./gradlew :26.3:build
 ```
 
 Alternatively:
@@ -113,6 +124,7 @@ Alternatively:
 ./gradlew build -Pmc=1.21.11
 ./gradlew build -Pmc=26.1
 ./gradlew build -Pmc=26.2
+./gradlew build -Pmc=26.3
 ```
 
 The built jar (and sources jar) will be in `versions/<version>/build/libs/`. With `-Pmc=...`, copies are also placed under the root `build/libs/`.
@@ -125,3 +137,4 @@ The built jar (and sources jar) will be in `versions/<version>/build/libs/`. Wit
 ## License
 
 MIT — see [LICENSE](LICENSE).
+```
